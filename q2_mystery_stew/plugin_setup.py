@@ -12,6 +12,7 @@ import q2_mystery_stew
 plugin = Plugin(
     name='mystery-stew',
     version=q2_mystery_stew.__version__,
+    website='https://github.com/qiime2/q2-mystery-stew',
     package='q2_mystery_stew',
     description=('This QIIME 2 plugin Templates out arbitrary QIIME 2 actions '
                  'to test interfaces. '),
