@@ -18,7 +18,7 @@ setup(
     license="BSD-3-Clause",
     packages=find_packages(),
     description="Template out arbitrary QIIME 2 actions to test interfaces. ",
-    scripts=[]],
+    scripts=[],
     package_data={
     },
     entry_points={
