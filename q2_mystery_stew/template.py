@@ -10,30 +10,56 @@ import inspect
 from q2_mystery_stew.templatable_echo_fmt import outputFileFmt
 
 
-class TemplatableCallable:
-    def __init__(self, input_, params, output, name):
-        self.input_ = input_
-        self.params = params
-        self.output = output
+def rewrite_function_signature(function, inputs, params, output, name):
+    pass
+    #raise ValueError(params)
+    # input_params = [inspect.Parameter(name,
+    #                 inspect.Parameter.POSITIONAL_ONLY,
+    #                 annotation=type_)
+    #                 for name, type_ in input_.items()]
+    # input_params.extend([inspect.Parameter(name,
+    #                      inspect.Parameter.POSITIONAL_ONLY,
+    #                      annotation=type_)
+    #                      for name, type_ in params.items()])
 
-        input_params = [inspect.Parameter(name,
-                        inspect.Parameter.POSITIONAL_ONLY,
-                        annotation=type_)
-                        for name, type_ in input_.items()]
-        input_params.extend([inspect.Parameter(name,
-                             inspect.Parameter.POSITIONAL_ONLY,
-                             annotation=type_)
-                             for name, type_ in params.items()])
+    # annotations = input_
+    # annotations.update(params)
+    # annotations.update({'return': output})
 
-        self.__call__.__func__.__signature__ = \
-            inspect.Signature(input_params, return_annotation=output)
+    # function_template.__signature__ = \
+    #     inspect.Signature(input_params, return_annotation=output)
+    # function_template.__annotations__ = annotations
+    # function_template.__name__ = name
 
-        annotations = input_
-        annotations.update(params)
-        annotations.update({'return': output})
 
-        self.__call__.__func__.__annotations__ = annotations
-        self.__call__.__func__.__name__ = name
+def function_template_1output(**kwargs):
+    output = outputFileFmt()
 
-    def __call__(**kwargs):
-        return outputFileFmt()
+    with output.open() as fh:
+        for kw, arg in kwargs.items():
+            fh.write(f'\n{kw}: {arg}')
+
+    return output
+
+
+def function_template_2output(**kwargs):
+    output = outputFileFmt()
+    output = outputFileFmt()  # some output file that says it's the second one
+
+    with output.open() as fh:
+        for kw, arg in kwargs.items():
+            fh.write(f'\n{kw}: {arg}')
+
+    return output, output
+
+
+def function_template_3output(**kwargs):
+    output = outputFileFmt()
+    output = outputFileFmt()  # some output file that says it's the second one
+    output = outputFileFmt()  # some output file that says it's the third one
+
+    with output.open() as fh:
+        for kw, arg in kwargs.items():
+            fh.write(f'\n{kw}: {arg}')
+
+    return output, output, output
