@@ -9,7 +9,7 @@ import unittest
 from itertools import product
 from collections import namedtuple
 
-from qiime2.plugin import Int, Str, Range
+from qiime2.plugin import Int, Range
 
 from q2_mystery_stew.template import rewrite_function_signature, \
                                      function_template_1output, \
@@ -19,109 +19,73 @@ from q2_mystery_stew.plugin_setup import plugin
 from q2_mystery_stew.templatable_echo_fmt import outputFile, outputFileFmt
 
 
-Signature = namedtuple('Signature', ['num_inputs', 'num_outputs', 'signature'])
-Parameter = namedtuple('Parameter', ['name', 'type', 'domain'])
+Sig = namedtuple('Sig', ['num_inputs', 'num_outputs', 'signature'])
+Param = namedtuple('Param', ['name', 'type', 'domain'])
 
 
 # We need to generate all combinations of template, args, and inputs
 # We want to create named tuples of these things and yield them,
 # itertools.product allows for easy cartesian product creation
 class TestTemplates(unittest.TestCase):
-    int_args = {
-        'single_int': Int,
-        'int_range_one_arg': Int % Range(5),
-        'int_range_two_args': Int % Range(-5, 5)
-    }
-
     function_signatures = (function_template_1output,
                            function_template_2output,
                            function_template_3output)
 
-    # int_args = (
-    #     Parameter('single_int', Int, (-4, 0, 4)),
-    #     Parameter('int_range_one_arg', Int % Range(5), (-4, 0, 4)),
-    #     Parameter('int_range_two_args', Int % Range(-5, 5), (-4, 0, 4))
-    # )
-
-    def generate_signatures(self):
-        for num_inputs in range(1, 4):
-            for num_outputs in range(1, 4):
-                yield Signature(num_inputs, num_outputs,
-                                self.function_signatures[num_outputs - 1])
+    def generate_signatures(self, args):
+        for num_inputs in range(1, len(args) + 1):
+            for num_outputs in range(1, len(self.function_signatures) + 1):
+                yield Sig(num_inputs, num_outputs,
+                          self.function_signatures[num_outputs - 1])
 
     def test_int_cases(self):
+        int_args = {
+            'single_int': Param('single_int', Int, (-4, 0, 4)),
+            'int_range_one_arg': Param('int_range_one_arg',
+                                       Int % Range(5), (-4, 0, 4)),
+            'int_range_two_args': Param('int_range_two_args',
+                                        Int % Range(-5, 5), (-4, 0, 4))
+        }
+
         num_functions = 0
+        signatures = self.generate_signatures(int_args)
 
-        signatures = self.generate_signatures()
         for signature in signatures:
-            for params in product(self.int_args, repeat=signature.num_inputs):
-                rewrite_function_signature(signature.signature,
-                                           None,
-                                           params,
-                                           signature.num_outputs,
-                                           str(num_functions))
+            for params in product(int_args.values(),
+                                  repeat=signature.num_inputs):
+                param_dict = {}
+                for i, param in enumerate(params):
+                    param_dict.update({param.name + f'__{i}': param.type})
 
-                print(num_functions)
+                rewrite_function_signature(signature.signature,
+                                           {},
+                                           param_dict,
+                                           signature.num_outputs,
+                                           f'_{num_functions}')
+
+                output = []
+                for i in range(signature.num_outputs):
+                    output.append((str(i), outputFile))
+
                 plugin.methods.register_function(
                     function=signature.signature,
                     inputs={},
-                    parameters=params,
-                    outputs={},
-                    name=str(num_functions),
+                    parameters=param_dict,
+                    outputs=output,
+                    name=f'_{num_functions}',
                     description=str(num_functions)
                 )
                 num_functions += 1
 
-        raise ValueError(num_functions)
+        for method in plugin.methods.values():
+            signature = method.signature
+            args = []
 
-        rewrite_function_signature({},
-                                   self.int_args,
-                                   (outputFileFmt,), 'foo')
+            for param in signature.parameters:
+                param = param.split('__')[0]
+                args.append(int_args[param].domain)
+            for arg_set in product(*args):
+                output = method(*arg_set)
 
-        plugin.methods.register_function(
-            function=function_template_1output,
-            inputs={},
-            parameters=self.int_args,
-            outputs=[('file', outputFile)],
-            name='test', description='test')
-
-        rewrite_function_signature({},
-                                   {'string': Str},
-                                   (outputFileFmt,), 'bar')
-
-        plugin.methods.register_function(
-            function=function_template_1output,
-            inputs={},
-            parameters={'string': Str},
-            outputs=[('file', outputFile)],
-            name='test', description='test')
-
-        x = plugin.actions['foo'](-4, -4, 4, 4, [1, 2])
-        plugin.actions['foo'].asynchronous(-4, -4, 4, 4, [1, 2])
-
-        plugin.actions['bar']('abawda')
-        plugin.actions['bar'].asynchronous('adawdadwa')
-
-        with x.file.view(outputFileFmt).open() as fh:
-            lines = ''.join(line for line in fh)
-
-        raise ValueError(lines)
-        self.assertIn('single_int: -4', lines)
-
-    def test_z(self):
-        rewrite_function_signature({},
-                                   {'string': Str},
-                                   (outputFileFmt,), 'bar')
-
-        plugin.methods.register_function(
-            function=function_template_1output,
-            inputs={},
-            parameters={'string': Str},
-            outputs=[('file', outputFile)],
-            name='test', description='test')
-
-        plugin.actions['foo'](1, 2, 3, 4, [1, 2])
-        plugin.actions['foo'].asynchronous(1, 2, 3, 4, [1, 2])
-
-        plugin.actions['bar']('abawda')
-        plugin.actions['bar'].asynchronous('adawdadwa')
+                with output[0].view(outputFileFmt).open() as fh:
+                    lines = ''.join(line for line in fh)
+                    self.assertIn(str(arg_set[0]), lines)

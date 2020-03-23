@@ -5,31 +5,33 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-import inspect
+from inspect import Signature, Parameter
 
 from q2_mystery_stew.templatable_echo_fmt import outputFileFmt
 
 
-def rewrite_function_signature(function, inputs, params, output, name):
-    pass
-    #raise ValueError(params)
-    # input_params = [inspect.Parameter(name,
-    #                 inspect.Parameter.POSITIONAL_ONLY,
-    #                 annotation=type_)
-    #                 for name, type_ in input_.items()]
-    # input_params.extend([inspect.Parameter(name,
-    #                      inspect.Parameter.POSITIONAL_ONLY,
-    #                      annotation=type_)
-    #                      for name, type_ in params.items()])
+def rewrite_function_signature(function, inputs, params, num_outputs, name):
+    output = []
+    for i in range(num_outputs):
+        output.append(outputFileFmt)
+    output = tuple(output)
 
-    # annotations = input_
-    # annotations.update(params)
-    # annotations.update({'return': output})
+    input_params = [Parameter(name, Parameter.POSITIONAL_ONLY,
+                              annotation=type_)
+                    for name, type_ in inputs.items()]
 
-    # function_template.__signature__ = \
-    #     inspect.Signature(input_params, return_annotation=output)
-    # function_template.__annotations__ = annotations
-    # function_template.__name__ = name
+    input_params.extend([Parameter(name, Parameter.POSITIONAL_ONLY,
+                                   annotation=type_)
+                        for name, type_ in params.items()])
+
+    annotations = inputs
+    annotations.update(params)
+    annotations.update({'return': output})
+
+    function.__signature__ = \
+        Signature(input_params, return_annotation=output)
+    function.__annotations__ = annotations
+    function.__name__ = name
 
 
 def function_template_1output(**kwargs):
@@ -39,27 +41,36 @@ def function_template_1output(**kwargs):
         for kw, arg in kwargs.items():
             fh.write(f'\n{kw}: {arg}')
 
-    return output
+    return output,
 
 
 def function_template_2output(**kwargs):
     output = outputFileFmt()
-    output = outputFileFmt()  # some output file that says it's the second one
+    output2 = outputFileFmt()  # some output file that says it's the second one
 
     with output.open() as fh:
         for kw, arg in kwargs.items():
             fh.write(f'\n{kw}: {arg}')
 
-    return output, output
+    with output2.open() as fh:
+        fh.wite('second')
+
+    return output, output2
 
 
 def function_template_3output(**kwargs):
     output = outputFileFmt()
-    output = outputFileFmt()  # some output file that says it's the second one
-    output = outputFileFmt()  # some output file that says it's the third one
+    output2 = outputFileFmt()  # some output file that says it's the second one
+    output3 = outputFileFmt()  # some output file that says it's the third one
 
     with output.open() as fh:
         for kw, arg in kwargs.items():
             fh.write(f'\n{kw}: {arg}')
 
-    return output, output, output
+    with output2.open() as fh:
+        fh.wite('second')
+
+    with output3.open() as fh:
+        fh.wite('third')
+
+    return output, output2, output3
