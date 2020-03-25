@@ -7,13 +7,13 @@
 # ----------------------------------------------------------------------------
 from inspect import Signature, Parameter
 
-from q2_mystery_stew.templatable_echo_fmt import outputFileFmt
+from q2_mystery_stew.templatable_echo_fmt import EchoOutputFmt
 
 
 def rewrite_function_signature(function, inputs, params, num_outputs, name):
     output = []
     for i in range(num_outputs):
-        output.append(outputFileFmt)
+        output.append(EchoOutputFmt)
     output = tuple(output)
 
     input_params = [Parameter(name, Parameter.POSITIONAL_ONLY,
@@ -35,7 +35,7 @@ def rewrite_function_signature(function, inputs, params, num_outputs, name):
 
 
 def function_template_1output(**kwargs):
-    output = outputFileFmt()
+    output = EchoOutputFmt()
 
     with output.open() as fh:
         for kw, arg in kwargs.items():
@@ -45,8 +45,8 @@ def function_template_1output(**kwargs):
 
 
 def function_template_2output(**kwargs):
-    output = outputFileFmt()
-    output2 = outputFileFmt()
+    output = EchoOutputFmt()
+    output2 = EchoOutputFmt()
 
     with output.open() as fh:
         for kw, arg in kwargs.items():
@@ -59,9 +59,9 @@ def function_template_2output(**kwargs):
 
 
 def function_template_3output(**kwargs):
-    output = outputFileFmt()
-    output2 = outputFileFmt()
-    output3 = outputFileFmt()
+    output = EchoOutputFmt()
+    output2 = EchoOutputFmt()
+    output3 = EchoOutputFmt()
 
     with output.open() as fh:
         for kw, arg in kwargs.items():
