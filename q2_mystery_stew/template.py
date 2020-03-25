@@ -39,7 +39,7 @@ def function_template_1output(**kwargs):
 
     with output.open() as fh:
         for kw, arg in kwargs.items():
-            fh.write(f'\n{kw}: {arg}')
+            fh.write(f'{kw}: {arg}\n')
 
     return output,
 
@@ -50,7 +50,7 @@ def function_template_2output(**kwargs):
 
     with output.open() as fh:
         for kw, arg in kwargs.items():
-            fh.write(f'\n{kw}: {arg}')
+            fh.write(f'{kw}: {arg}\n')
 
     with output2.open() as fh:
         fh.write('second')
@@ -65,7 +65,7 @@ def function_template_3output(**kwargs):
 
     with output.open() as fh:
         for kw, arg in kwargs.items():
-            fh.write(f'\n{kw}: {arg}')
+            fh.write(f'{kw}: {arg}\n')
 
     with output2.open() as fh:
         fh.write('second')
