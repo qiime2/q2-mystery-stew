@@ -23,9 +23,6 @@ Sig = namedtuple('Sig', ['num_inputs', 'num_outputs', 'signature'])
 Param = namedtuple('Param', ['name', 'type', 'domain'])
 
 
-# We need to generate all combinations of template, args, and inputs
-# We want to create named tuples of these things and yield them,
-# itertools.product allows for easy cartesian product creation
 class TestTemplates(unittest.TestCase):
     function_signatures = (function_template_1output,
                            function_template_2output,

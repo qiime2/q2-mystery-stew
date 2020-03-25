@@ -46,7 +46,7 @@ def function_template_1output(**kwargs):
 
 def function_template_2output(**kwargs):
     output = outputFileFmt()
-    output2 = outputFileFmt()  # some output file that says it's the second one
+    output2 = outputFileFmt()
 
     with output.open() as fh:
         for kw, arg in kwargs.items():
@@ -60,8 +60,8 @@ def function_template_2output(**kwargs):
 
 def function_template_3output(**kwargs):
     output = outputFileFmt()
-    output2 = outputFileFmt()  # some output file that says it's the second one
-    output3 = outputFileFmt()  # some output file that says it's the third one
+    output2 = outputFileFmt()
+    output3 = outputFileFmt()
 
     with output.open() as fh:
         for kw, arg in kwargs.items():
