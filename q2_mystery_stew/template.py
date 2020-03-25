@@ -53,7 +53,7 @@ def function_template_2output(**kwargs):
             fh.write(f'\n{kw}: {arg}')
 
     with output2.open() as fh:
-        fh.wite('second')
+        fh.write('second')
 
     return output, output2
 
@@ -68,9 +68,9 @@ def function_template_3output(**kwargs):
             fh.write(f'\n{kw}: {arg}')
 
     with output2.open() as fh:
-        fh.wite('second')
+        fh.write('second')
 
     with output3.open() as fh:
-        fh.wite('third')
+        fh.write('third')
 
     return output, output2, output3

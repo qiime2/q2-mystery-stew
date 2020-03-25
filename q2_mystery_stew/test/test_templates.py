@@ -81,11 +81,24 @@ class TestTemplates(unittest.TestCase):
             args = []
 
             for param in signature.parameters:
-                param = param.split('__')[0]
-                args.append(int_args[param].domain)
-            for arg_set in product(*args):
-                output = method(*arg_set)
+                param_type = param.split('__')[0]
+                args.append(int_args[param_type].domain)
+
+            for arg_list in product(*args):
+                output = method(*arg_list)
 
                 with output[0].view(outputFileFmt).open() as fh:
                     lines = ''.join(line for line in fh)
-                    self.assertIn(str(arg_set[0]), lines)
+
+                    for arg, param_name in zip(arg_list, signature.parameters):
+                        self.assertIn(f'{param_name}: {arg}', lines)
+
+                if len(output) > 1:
+                    with output[1].view(outputFileFmt).open() as fh:
+                        lines = ''.join(line for line in fh)
+                        self.assertIn('second', lines)
+
+                if len(output) > 2:
+                    with output[2].view(outputFileFmt).open() as fh:
+                        lines = ''.join(line for line in fh)
+                        self.assertIn('third', lines)
