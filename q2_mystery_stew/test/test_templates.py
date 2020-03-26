@@ -28,7 +28,6 @@ class TestTemplates(unittest.TestCase):
         }
 
         for method in plugin.methods.values():
-            raise ValueError(method)
             signature = method.signature
             args = []
 
