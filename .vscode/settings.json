@@ -1,5 +1,0 @@
-{
-    "python.linting.flake8Enabled": true,
-    "python.linting.enabled": true,
-    "python.pythonPath": "/home/anthony/miniconda3/envs/q2-dev/bin/python"
-}
