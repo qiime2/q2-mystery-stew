@@ -5,17 +5,11 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-import unittest
-
-from qiime2.sdk import usage
-
-from q2_mystery_stew.plugin_setup import plugin
+from qiime2.plugin.testing import TestPluginBase
 
 
-class TestTemplates(unittest.TestCase):
-    def test_int_cases(self):
-        use = usage.DiagnosticUsage()
+class TestTemplates(TestPluginBase):
+    package = 'q2_mystery_stew.test'
 
-        for action_ in plugin.actions.values():
-            for example in action_.examples.values():
-                example(use)
+    def test_examples(self):
+        self.execute_examples()

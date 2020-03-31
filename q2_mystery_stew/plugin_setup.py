@@ -44,17 +44,22 @@ class UsageInstantiator:
         for param in inputs_params:
             self.inputs_params.update(param)
 
-        self.outputs = {}
-        for output in outputs:
-            self.outputs.update({output[0]: str(output[1])})
-
+        self.outputs = outputs
         self.name = name
+        self.output_names = {k: k for k, _ in self.outputs}
 
     def __call__(self, use):
         use.action(
             UsageAction(plugin_id='mystery_stew', action_id=self.name),
             UsageInputs(**self.inputs_params),
-            UsageOutputNames(**self.outputs),
+            UsageOutputNames(**self.output_names),
+        )
+
+        output = use.get_result('outputs_0')
+        output.assert_has_line_matching(
+            label='a nice label about this assertion',
+            path='echo.txt',
+            expression='',
         )
 
 
@@ -68,9 +73,9 @@ def generate_signatures(args):
 int_args = {
     'single_int': Param('single_int', Int, (-4, 0, 4)),
     'int_range_one_arg': Param('int_range_one_arg',
-                               Int % Range(5), (-5, 1, 5)),
+                               Int % Range(6), (-5, 1, 5)),
     'int_range_two_args': Param('int_range_two_args',
-                                Int % Range(-5, 5), (-6, 2, 6))
+                                Int % Range(-7, 7), (-6, 2, 6))
 }
 
 num_functions = 0

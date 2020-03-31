@@ -16,4 +16,4 @@ class EchoOutputFmt(model.TextFileFormat):
 
 
 EchoOutputDirFmt = model.SingleFileDirectoryFormat('EchoOutputDirFmt',
-                                                   'stats.tsv', EchoOutputFmt)
+                                                   'echo.txt', EchoOutputFmt)
