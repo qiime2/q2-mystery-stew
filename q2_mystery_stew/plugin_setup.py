@@ -55,12 +55,31 @@ class UsageInstantiator:
             UsageOutputNames(**self.output_names),
         )
 
-        output = use.get_result('outputs_0')
-        output.assert_has_line_matching(
-            label='a nice label about this assertion',
+        for name, value in self.inputs_params.items():
+            inputs_params = ''.join(f'{name}: {value}\n')
+
+        output1 = use.get_result('output_1')
+        output1.assert_has_line_matching(
+            label='validate inputs and params',
             path='echo.txt',
-            expression='',
+            expression=inputs_params,
         )
+
+        if len(self.output_names) > 1:
+            output2 = use.get_result('output_2')
+            output2.assert_has_line_matching(
+                label='validate second',
+                path='echo.txt',
+                expression='second',
+            )
+
+        if len(self.output_names) > 2:
+            output3 = use.get_result('output_3')
+            output3.assert_has_line_matching(
+                label='validate third',
+                path='echo.txt',
+                expression='third',
+            )
 
 
 def generate_signatures(args):
@@ -102,7 +121,7 @@ for signature in signatures:
 
         outputs = []
         for i in range(signature.num_outputs):
-            outputs.append((f'outputs_{i}', EchoOutput))
+            outputs.append((f'output_{i + 1}', EchoOutput))
 
         valid_param_values = [[] for param in range(len(param_dict))]
         for index, name in enumerate(param_dict):
