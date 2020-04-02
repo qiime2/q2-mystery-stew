@@ -9,7 +9,7 @@ from qiime2.plugin import Plugin
 from itertools import product
 from collections import namedtuple
 
-from qiime2.plugin import Int, Range, Float, Bool, Str, UsageAction, \
+from qiime2.plugin import Int, Range, Float, Bool, Str, Choices, UsageAction, \
                           UsageInputs, UsageOutputNames
 
 import q2_mystery_stew
@@ -111,6 +111,8 @@ float_args = {
 non_numerical_args = {
     'string': Param('string',
                     Str, ('', 'some string')),
+    'string_choices': Param('string_choices',
+                            Str % Choices('A', 'B'), ('A', 'B')),
     'boolean': Param('boolean',
                      Bool, (True, False)),
 }
