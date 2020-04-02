@@ -9,8 +9,8 @@ from qiime2.plugin import Plugin
 from itertools import product
 from collections import namedtuple
 
-from qiime2.plugin import Int, Range, UsageAction, UsageInputs, \
-                          UsageOutputNames
+from qiime2.plugin import Int, Range, Float, Bool, Str, UsageAction, \
+                          UsageInputs, UsageOutputNames
 
 import q2_mystery_stew
 from q2_mystery_stew.template import rewrite_function_signature, \
@@ -30,7 +30,7 @@ plugin = Plugin(
     short_description='Plugin for generating arbitrary QIIME 2 actions.'
 )
 
-Sig = namedtuple('Sig', ['num_inputs', 'num_outputs', 'signature'])
+Sig = namedtuple('Sig', ['arg_set', 'num_inputs', 'num_outputs', 'signature'])
 Param = namedtuple('Param', ['base_name', 'type', 'domain'])
 
 function_signatures = (function_template_1output,
@@ -83,25 +83,49 @@ class UsageInstantiator:
 
 
 def generate_signatures(args):
-    for num_inputs in range(1, len(args) + 1):
-        for num_outputs in range(1, len(function_signatures) + 1):
-            yield Sig(num_inputs, num_outputs,
-                      function_signatures[num_outputs - 1])
+    for name, arg_set in args.items():
+        for num_inputs in range(1, len(arg_set) + 1):
+            for num_outputs in range(1, len(function_signatures) + 1):
+                yield Sig(name, num_inputs, num_outputs,
+                          function_signatures[num_outputs - 1])
 
 
 int_args = {
-    'single_int': Param('single_int', Int, (-4, 0, 4)),
+    'single_int': Param('single_int',
+                        Int, (1,)),
     'int_range_one_arg': Param('int_range_one_arg',
-                               Int % Range(6), (-5, 1, 5)),
+                               Int % Range(6), (5,)),
     'int_range_two_args': Param('int_range_two_args',
-                                Int % Range(-7, 7), (-6, 2, 6))
+                                Int % Range(-6, 7), (-6, 6)),
+}
+
+float_args = {
+    'single_float': Param('single_float',
+                          Float, (2.5,)),
+    'float_range_one_arg': Param('float_range_one_arg',
+                                 Float % Range(8.5), (8.49,)),
+    'float_range_two_args': Param('float_range_two_args',
+                                  Float % Range(-9.5, 9.5), (-9.5, 9.49)),
+}
+
+non_numerical_args = {
+    'string': Param('string',
+                    Str, ('', 'some string')),
+    'boolean': Param('boolean',
+                     Bool, (True, False)),
+}
+
+args = {
+    'ints': int_args,
+    'floats': float_args,
+    'non_numericals': non_numerical_args,
 }
 
 num_functions = 0
-signatures = generate_signatures(int_args)
+signatures = generate_signatures(args)
 
 for signature in signatures:
-    for params in product(int_args.values(),
+    for params in product(args[signature.arg_set].values(),
                           repeat=signature.num_inputs):
         action_name = f'func_{num_functions}'
 
