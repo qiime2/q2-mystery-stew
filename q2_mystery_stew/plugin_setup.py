@@ -8,9 +8,12 @@
 from qiime2.plugin import Plugin
 from itertools import product
 from collections import namedtuple
+import pandas as pd
 
-from qiime2.plugin import Int, Range, Float, Bool, Str, Choices, UsageAction, \
-                          UsageInputs, UsageOutputNames
+import qiime2
+from qiime2.plugin import Int, Range, Float, Bool, Str, Choices, List, \
+                          Metadata, MetadataColumn, Categorical, Numeric, \
+                          UsageAction, UsageInputs, UsageOutputNames
 
 import q2_mystery_stew
 from q2_mystery_stew.template import rewrite_function_signature, \
@@ -56,6 +59,8 @@ class UsageInstantiator:
         )
 
         for name, value in self.inputs_params.items():
+            if 'md' in name:
+                value = value.to_dataframe()
             inputs_params = ''.join(f'{name}: {value}\n')
 
         output1 = use.get_result('output_1')
@@ -90,6 +95,7 @@ def generate_signatures(args):
                           function_signatures[num_outputs - 1])
 
 
+# TODO: Ranges need to vary which end(s) they're inclusive on
 int_args = {
     'single_int': Param('single_int',
                         Int, (-1, 0, 1)),
@@ -117,16 +123,44 @@ non_numerical_args = {
                      Bool, (True, False)),
 }
 
+# TODO: Figure out an implementation for collections
+collection_args = {
+    'list': Param('list', List, ())
+}
+
+# TODO: What edge cases are there here if any
+mdc_cat_val = pd.Series({'a': 'a'}, name='cat')
+mdc_cat_val.index.name = 'id'
+
+mdc_num_val = pd.Series({'a': 1}, name='num')
+mdc_num_val.index.name = 'id'
+
+metadata_args = {
+    'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
+                                 index=pd.Index(['0'], name='id'))),)),
+    'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
+                     (qiime2.CategoricalMetadataColumn(mdc_cat_val),)),
+    'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
+                     (qiime2.NumericMetadataColumn(mdc_num_val),)),
+}
+
 args = {
     'ints': int_args,
     'floats': float_args,
     'non_numericals': non_numerical_args,
+    'metadata': metadata_args,
 }
 
 num_functions = 0
 signatures = generate_signatures(args)
 
+# TODO: Remove
 num_examples = 0
+
+# TODO: This is getting ridiculous. The tests take almost 5 minutes right now
+# what can we do aside from cartesian product. One idea, do the cross set
+# cartesian product, but only actually use a small portion of them? i.e iterate
+# over all of them only registering every 100th or something?
 for signature in signatures:
     for params in product(args[signature.arg_set].values(),
                           repeat=signature.num_inputs):
@@ -174,7 +208,8 @@ for signature in signatures:
         )
         num_functions += 1
 
-raise ValueError(num_examples)
+# TODO: remove
+# raise ValueError(num_examples)
 plugin.register_formats(EchoOutputFmt, EchoOutputDirFmt)
 plugin.register_semantic_types(EchoOutput)
 plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
