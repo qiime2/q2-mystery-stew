@@ -92,20 +92,20 @@ def generate_signatures(args):
 
 int_args = {
     'single_int': Param('single_int',
-                        Int, (1,)),
+                        Int, (-1, 0, 1)),
     'int_range_one_arg': Param('int_range_one_arg',
-                               Int % Range(6), (5,)),
+                               Int % Range(3), (-2, 0, 2)),
     'int_range_two_args': Param('int_range_two_args',
-                                Int % Range(-6, 7), (-6, 6)),
+                                Int % Range(-3, 4), (-3, 0, 3)),
 }
 
 float_args = {
     'single_float': Param('single_float',
-                          Float, (2.5,)),
+                          Float, (-1.5, 0.0, 1.5)),
     'float_range_one_arg': Param('float_range_one_arg',
-                                 Float % Range(8.5), (8.49,)),
+                                 Float % Range(2.5), (-2.5, 0.0, 2.49)),
     'float_range_two_args': Param('float_range_two_args',
-                                  Float % Range(-9.5, 9.5), (-9.5, 9.49)),
+                                  Float % Range(-3.5, 3.5), (-3.5, 0, 3.49)),
 }
 
 non_numerical_args = {
@@ -126,6 +126,7 @@ args = {
 num_functions = 0
 signatures = generate_signatures(args)
 
+num_examples = 0
 for signature in signatures:
     for params in product(args[signature.arg_set].values(),
                           repeat=signature.num_inputs):
@@ -160,6 +161,7 @@ for signature in signatures:
             example_name = action_name + f'_{example_number}'
             usage_examples[example_name] = \
                 UsageInstantiator(valid_params, outputs, action_name)
+            num_examples += 1
 
         plugin.methods.register_function(
             function=signature.signature,
@@ -172,6 +174,7 @@ for signature in signatures:
         )
         num_functions += 1
 
+raise ValueError(num_examples)
 plugin.register_formats(EchoOutputFmt, EchoOutputDirFmt)
 plugin.register_semantic_types(EchoOutput)
 plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
