@@ -55,7 +55,7 @@ def function_template_2output(**kwargs):
     output2 = EchoOutputFmt()
 
     # TODO: Remove
-    with open('~/tst/test.txt', 'w') as fh:
+    with open('/home/anthony/tst/test.txt', 'w') as fh:
         for kw, arg in kwargs.items():
             fh.write(f'{kw}: {arg}\n')
     with output.open() as fh:
@@ -74,7 +74,7 @@ def function_template_3output(**kwargs):
     output3 = EchoOutputFmt()
 
     # TODO: Remove
-    with open('~/tst/test.txt', 'w') as fh:
+    with open('/home/anthony/tst/test.txt', 'w') as fh:
         for kw, arg in kwargs.items():
             fh.write(f'{kw}: {arg}\n')
     with output.open() as fh:
