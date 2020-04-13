@@ -92,6 +92,13 @@ def generate_signatures():
                       function_templates[num_outputs - 1])
 
 
+# TODO: What edge cases are there here if any
+mdc_cat_val = pd.Series({'a': 'a'}, name='cat')
+mdc_cat_val.index.name = 'id'
+
+mdc_num_val = pd.Series({'a': 1}, name='num')
+mdc_num_val.index.name = 'id'
+
 all_params = {
     # int parameters
     'single_int': Param('single_int',
@@ -146,12 +153,12 @@ all_params = {
     'boolean': Param('boolean',
                      Bool, (True, False)),
     # metedata parameters
-    # 'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
-    #                              index=pd.Index(['0'], name='id'))),)),
-    # 'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
-    #                  (qiime2.CategoricalMetadataColumn(mdc_cat_val),)),
-    # 'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
-    #                  (qiime2.NumericMetadataColumn(mdc_num_val),)),
+    'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
+                                 index=pd.Index(['0'], name='id'))),)),
+    'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
+                     (qiime2.CategoricalMetadataColumn(mdc_cat_val),)),
+    'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
+                     (qiime2.NumericMetadataColumn(mdc_num_val),)),
     # collection parameters
     # 'int_list': Param('int_list', List[Int], (int_params.values())),
     # 'float_list': Param('float_list', List[Float], (float_params.values())),
