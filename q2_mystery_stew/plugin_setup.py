@@ -14,7 +14,6 @@ import qiime2
 from qiime2.plugin import Int, Range, Float, Bool, Str, Choices, List, Set, \
                           Metadata, MetadataColumn, Categorical, Numeric, \
                           UsageAction, UsageInputs, UsageOutputNames
-from qiime2.core.type.collection import Tuple
 
 import q2_mystery_stew
 from q2_mystery_stew.template import rewrite_function_signature, \
@@ -92,14 +91,7 @@ def generate_signatures():
                       function_templates[num_outputs - 1])
 
 
-# TODO: What edge cases are there here if any
-mdc_cat_val = pd.Series({'a': 'a'}, name='cat')
-mdc_cat_val.index.name = 'id'
-
-mdc_num_val = pd.Series({'a': 1}, name='num')
-mdc_num_val.index.name = 'id'
-
-all_params = {
+int_params = {
     # int parameters
     'single_int': Param('single_int',
                         Int, (-1, 0, 1)),
@@ -121,7 +113,11 @@ all_params = {
                                          Int % Range(-3, 4,
                                                      inclusive_start=False,
                                                      inclusive_end=True),
-                                         (-2, 0, 4)),
+                                         (-2, 0, 4))
+}
+int_values = tuple(int_params.values())
+
+float_params = {
     # float parameters
     'single_float': Param('single_float',
                           Float, (-1.5, 0.0, 1.5)),
@@ -144,7 +140,29 @@ all_params = {
                                            Float % Range(-3.5, 3.5,
                                                          inclusive_start=False,
                                                          inclusive_end=True),
-                                           (-3.49, 0, 3.49)),
+                                           (-3.49, 0, 3.49))
+}
+float_values = tuple(float_params.values())
+
+collection_params = {
+    # collection parameters
+    'int_list': Param('int_list', List[Int], (int_values)),
+    'float_list': Param('float_list', List[Float], (float_values)),
+    'int_set': Param('int_set', Set[Int], (int_values)),
+    'float_set': Param('float_set', Set[Float], (float_values))
+}
+
+# TODO: What edge cases are there here if any
+mdc_cat_val = pd.Series({'a': 'a'}, name='cat')
+mdc_cat_val.index.name = 'id'
+
+mdc_num_val = pd.Series({'a': 1}, name='num')
+mdc_num_val.index.name = 'id'
+
+all_params = {
+    **int_params,
+    **float_params,
+    **collection_params,
     # non-numerical parameters
     'string': Param('string',
                     Str, ('', 'some string')),
@@ -152,21 +170,13 @@ all_params = {
                             Str % Choices('A', 'B'), ('A', 'B')),
     'boolean': Param('boolean',
                      Bool, (True, False)),
-    # metedata parameters
+    # metadata parameters
     'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
                                  index=pd.Index(['0'], name='id'))),)),
     'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
                      (qiime2.CategoricalMetadataColumn(mdc_cat_val),)),
     'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
-                     (qiime2.NumericMetadataColumn(mdc_num_val),)),
-    # collection parameters
-    # 'int_list': Param('int_list', List[Int], (int_params.values())),
-    # 'float_list': Param('float_list', List[Float], (float_params.values())),
-    # 'int_set': Param('int_set', Set[Int], (int_params.values())),
-    # 'float_set': Param('float_set', Set[Float], (float_params.values())),
-    # 'tuple': Param('tuple', Tuple, (int_params, float_params)),
-    # 'int_tuple': Param('int_tuple', Tuple[Int], (int_params)),
-    # 'float_tuple': Param('float_tuple', Tuple[Float], (float_params))
+                     (qiime2.NumericMetadataColumn(mdc_num_val),))
 }
 
 num_functions = 0
@@ -196,13 +206,34 @@ for sig in signatures:
                 outputs.append((f'output_{i + 1}', EchoOutput))
 
             chosen_param_values = {}
-            for index, name in enumerate(param_dict):
-                if len(param_dict[name].domain) >= sig.num_outputs:
-                    chosen_param_values.update(
-                        {name: param_dict[name].domain[sig.num_outputs - 1]})
+            for index, (name, value) in enumerate(param_dict.items()):
+                if value.type == List[Int] or value.type == List[Float]:
+                    param_val = []
+                    for val in range(sig.num_outputs):
+                        domain_size = len(value.domain)
+                        selected_param = \
+                            value.domain[domain_size % sig.num_outputs]
+
+                        selected_size = len(selected_param.domain)
+                        param_val.append(
+                            selected_param.domain[selected_size %
+                                                  sig.num_outputs])
+                elif value.type == Set[Int] or value.type == Set[Float]:
+                    param_val = set()
+                    for val in range(sig.num_outputs):
+                        domain_size = len(value.domain)
+                        selected_param = \
+                            value.domain[domain_size % sig.num_outputs]
+
+                        selected_size = len(selected_param.domain)
+                        param_val.add(
+                            selected_param.domain[selected_size %
+                                                  sig.num_outputs])
+                    param_val = tuple(param_val)
                 else:
+                    domain_size = len(value.domain)
                     chosen_param_values.update(
-                        {name: param_dict[name].domain[0]})
+                        {name: value.domain[sig.num_outputs % domain_size]})
 
             usage_example = \
                 {action_name:
