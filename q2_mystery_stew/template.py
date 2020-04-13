@@ -38,11 +38,11 @@ def function_template_1output(**kwargs):
     output = EchoOutputFmt()
 
     # TODO: Remove
-    with open('/home/anthony/tst/test.txt', 'w') as fh:
-        for kw, arg in kwargs.items():
-            if 'md' in kw:
-                arg = arg.to_dataframe()
-            fh.write(f'{kw}: {arg}\n')
+    # with open('/home/anthony/tst/test.txt', 'w') as fh:
+    #     for kw, arg in kwargs.items():
+    #         if 'md' in kw:
+    #             arg = arg.to_dataframe()
+    #         fh.write(f'{kw}: {arg}\n')
     with output.open() as fh:
         for kw, arg in kwargs.items():
             fh.write(f'{kw}: {arg}\n')
@@ -55,9 +55,11 @@ def function_template_2output(**kwargs):
     output2 = EchoOutputFmt()
 
     # TODO: Remove
-    with open('/home/anthony/tst/test.txt', 'w') as fh:
-        for kw, arg in kwargs.items():
-            fh.write(f'{kw}: {arg}\n')
+    # with open('/home/anthony/tst/test.txt', 'w') as fh:
+    #     for kw, arg in kwargs.items():
+    #         if 'md' in kw:
+    #             arg = arg.to_dataframe()
+    #         fh.write(f'{kw}: {arg}\n')
     with output.open() as fh:
         for kw, arg in kwargs.items():
             fh.write(f'{kw}: {arg}\n')
@@ -74,9 +76,11 @@ def function_template_3output(**kwargs):
     output3 = EchoOutputFmt()
 
     # TODO: Remove
-    with open('/home/anthony/tst/test.txt', 'w') as fh:
-        for kw, arg in kwargs.items():
-            fh.write(f'{kw}: {arg}\n')
+    # with open('/home/anthony/tst/test.txt', 'w') as fh:
+    #     for kw, arg in kwargs.items():
+    #         if 'md' in kw:
+    #             arg = arg.to_dataframe()
+    #         fh.write(f'{kw}: {arg}\n')
     with output.open() as fh:
         for kw, arg in kwargs.items():
             fh.write(f'{kw}: {arg}\n')

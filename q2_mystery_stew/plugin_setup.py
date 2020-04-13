@@ -255,7 +255,6 @@ for sig in signatures:
 
             num_functions += 1
 
-raise ValueError(num_functions)
 plugin.register_formats(EchoOutputFmt, EchoOutputDirFmt)
 plugin.register_semantic_types(EchoOutput)
 plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
