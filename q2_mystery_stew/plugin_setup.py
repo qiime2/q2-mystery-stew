@@ -218,6 +218,8 @@ for sig in signatures:
                         param_val.append(
                             selected_param.domain[selected_size %
                                                   sig.num_outputs])
+
+                    chosen_param_values.update({name: param_val})
                 elif value.type == Set[Int] or value.type == Set[Float]:
                     param_val = set()
                     for val in range(sig.num_outputs):
@@ -230,6 +232,8 @@ for sig in signatures:
                             selected_param.domain[selected_size %
                                                   sig.num_outputs])
                     param_val = tuple(param_val)
+
+                    chosen_param_values.update({name: param_val})
                 else:
                     domain_size = len(value.domain)
                     chosen_param_values.update(
@@ -251,6 +255,7 @@ for sig in signatures:
 
             num_functions += 1
 
+raise ValueError(num_functions)
 plugin.register_formats(EchoOutputFmt, EchoOutputDirFmt)
 plugin.register_semantic_types(EchoOutput)
 plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
