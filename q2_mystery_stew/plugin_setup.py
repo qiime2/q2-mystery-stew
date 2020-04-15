@@ -85,6 +85,7 @@ class UsageInstantiator:
 
 
 def generate_signatures():
+    # 1 to 3 inputs just because that's how many outputs we have
     for num_inputs in range(1, 4):
         for num_outputs in range(1, len(function_templates) + 1):
             yield Sig(num_inputs, num_outputs,
@@ -96,10 +97,10 @@ int_params = {
     'single_int': Param('single_int',
                         Int, (-1, 0, 1)),
     'int_range_1_param': Param('int_range_1_param',
-                               Int % Range(3), (-2, 0, 2)),
+                               Int % Range(3), (-42, 0, 2)),
     'int_range_1_param_i_e': Param('int_range_1_param_i_e',
                                    Int % Range(3, inclusive_end=True),
-                                   (-3, 0, 3)),
+                                   (-43, 0, 3)),
     'int_range_2_params': Param('int_range_2_params',
                                 Int % Range(-3, 4), (-3, 0, 3)),
     'int_range_2_params_i_e': Param('int_range_2_params_i_e',
@@ -122,10 +123,10 @@ float_params = {
     'single_float': Param('single_float',
                           Float, (-1.5, 0.0, 1.5)),
     'float_range_1_param': Param('float_range_1_param',
-                                 Float % Range(2.5), (-2.5, 0.0, 2.49)),
+                                 Float % Range(2.5), (-42.5, 0.0, 2.49)),
     'float_range_1_param_i_e': Param('float_range_1_param_i_e',
                                      Float % Range(2.5, inclusive_end=True),
-                                     (-2.5, 0.0, 2.5)),
+                                     (-42.5, 0.0, 2.5)),
     'float_range_2_params': Param('float_range_2_params',
                                   Float % Range(-3.5, 3.5), (-3.5, 0, 3.49)),
     'float_range_2_params_i_e': Param('float_range_2_params_i_e',
@@ -170,6 +171,12 @@ all_params = {
                             Str % Choices('A', 'B'), ('A', 'B')),
     'boolean': Param('boolean',
                      Bool, (True, False)),
+    'boolean_true': Param('boolean_true',
+                          Bool % Choices(True), (True,)),
+    'boolean_false': Param('boolean_false',
+                           Bool % Choices(False), (False,)),
+    'boolean_choice': Param('boolean_choice',
+                            Bool % Choices(True, False), (True, False)),
     # metadata parameters
     'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
                                  index=pd.Index(['0'], name='id'))),)),
@@ -179,11 +186,13 @@ all_params = {
                      (qiime2.NumericMetadataColumn(mdc_num_val),))
 }
 
-num_functions = 0
-signatures = generate_signatures()
-for sig in signatures:
-    for param_set in product(all_params.values(), repeat=sig.num_inputs):
-        for params in zip(param_set):
+
+def register_test_cases(plugin, all_params):
+    num_functions = 0
+    signatures = generate_signatures()
+
+    for sig in signatures:
+        for params in product(all_params.values(), repeat=sig.num_inputs):
             action_name = f'func_{num_functions}'
 
             param_dict = {}
@@ -240,8 +249,8 @@ for sig in signatures:
                         {name: value.domain[sig.num_outputs % domain_size]})
 
             usage_example = \
-                {action_name:
-                 UsageInstantiator(chosen_param_values, outputs, action_name)}
+                {action_name: UsageInstantiator(chosen_param_values, outputs,
+                                                action_name)}
 
             plugin.methods.register_function(
                 function=sig.template,
@@ -254,6 +263,9 @@ for sig in signatures:
             )
 
             num_functions += 1
+
+
+register_test_cases(plugin, all_params)
 
 plugin.register_formats(EchoOutputFmt, EchoOutputDirFmt)
 plugin.register_semantic_types(EchoOutput)
