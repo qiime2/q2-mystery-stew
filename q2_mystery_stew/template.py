@@ -34,33 +34,32 @@ def rewrite_function_signature(function, inputs, params, num_outputs, name):
     function.__name__ = name
 
 
-def function_template_1output(**kwargs):
-    output = EchoOutputFmt()
-
-    # TODO: Remove
-    # with open('/home/anthony/tst/test.txt', 'a') as fh:
-    #     for kw, arg in kwargs.items():
-    #         fh.write(f'{kw}: {arg}\n')
-    #     fh.write('\n')
+def write_output(output, **kwargs):
     with output.open() as fh:
-        for kw, arg in kwargs.items():
-            fh.write(f'{kw}: {arg}\n')
+        for name, arg in kwargs.items():
+            if 'md' in name:
+                arg = arg.to_dataframe()
+            elif type(arg) == list or type(arg) == set:
+                arg_str = ''
+                for val in arg:
+                    arg_str += f': {val}'
+
+                arg = arg_str
+
+            fh.write(f'{name}: {arg}\n')
+
+    return output
+
+
+def function_template_1output(**kwargs):
+    output = write_output(EchoOutputFmt(), **kwargs)
 
     return output,
 
 
 def function_template_2output(**kwargs):
-    output = EchoOutputFmt()
+    output = write_output(EchoOutputFmt(), **kwargs)
     output2 = EchoOutputFmt()
-
-    # TODO: Remove
-    # with open('/home/anthony/tst/test.txt', 'a') as fh:
-    #     for kw, arg in kwargs.items():
-    #         fh.write(f'{kw}: {arg}\n')
-    #     fh.write('\n')
-    with output.open() as fh:
-        for kw, arg in kwargs.items():
-            fh.write(f'{kw}: {arg}\n')
 
     with output2.open() as fh:
         fh.write('second')
@@ -69,18 +68,9 @@ def function_template_2output(**kwargs):
 
 
 def function_template_3output(**kwargs):
-    output = EchoOutputFmt()
+    output = write_output(EchoOutputFmt(), **kwargs)
     output2 = EchoOutputFmt()
     output3 = EchoOutputFmt()
-
-    # TODO: Remove
-    # with open('/home/anthony/tst/test.txt', 'a') as fh:
-    #     for kw, arg in kwargs.items():
-    #         fh.write(f'{kw}: {arg}\n')
-    #     fh.write('\n')
-    with output.open() as fh:
-        for kw, arg in kwargs.items():
-            fh.write(f'{kw}: {arg}\n')
 
     with output2.open() as fh:
         fh.write('second')

@@ -55,17 +55,24 @@ class UsageInstantiator:
             UsageOutputNames(**self.output_names),
         )
 
-        for name, value in self.inputs_params.items():
+        for name, arg in self.inputs_params.items():
             if 'md' in name:
-                value = value.to_dataframe()
-            inputs_params = ''.join(f'{name}: {value}\n')
+                arg = arg.to_dataframe()
+            elif type(arg) == list or type(arg) == set:
+                arg_str = ''
+                for val in arg:
+                    arg_str += f': {val}'
 
-        output1 = use.get_result('output_1')
-        output1.assert_has_line_matching(
-            label='validate inputs and params',
-            path='echo.txt',
-            expression=inputs_params,
-        )
+                arg = arg_str
+
+            param = f'{name}: {arg}\n'
+
+            output1 = use.get_result('output_1')
+            output1.assert_has_line_matching(
+                label='validate inputs and params',
+                path='echo.txt',
+                expression=f'{param}',
+            )
 
         if len(self.output_names) > 1:
             output2 = use.get_result('output_2')
@@ -85,8 +92,7 @@ class UsageInstantiator:
 
 
 def generate_signatures():
-    # 1 to 3 inputs just because that's how many outputs we have
-    for num_inputs in range(1, 4):
+    for num_inputs in range(1, len(function_templates) + 1):
         for num_outputs in range(1, len(function_templates) + 1):
             yield Sig(num_inputs, num_outputs,
                       function_templates[num_outputs - 1])
@@ -128,20 +134,20 @@ float_params = {
                                      Float % Range(2.5, inclusive_end=True),
                                      (-42.5, 0.0, 2.5)),
     'float_range_2_params': Param('float_range_2_params',
-                                  Float % Range(-3.5, 3.5), (-3.5, 0, 3.49)),
+                                  Float % Range(-3.5, 3.5), (-3.5, 0.0, 3.49)),
     'float_range_2_params_i_e': Param('float_range_2_params_i_e',
                                       Float % Range(-3.5, 3.5,
                                                     inclusive_end=True),
-                                      (-3.5, 0, 3.5)),
+                                      (-3.5, 0.0, 3.5)),
     'float_range_2_params_no_i': Param('float_range_2_params_no_i',
                                        Float % Range(-3.5, 3.5,
                                                      inclusive_start=False),
-                                       (-3.49, 0, 3.49)),
+                                       (-3.49, 0.0, 3.49)),
     'float_range_2_params_i_e_ex_s': Param('float_range_2_params_i_e_ex_s',
                                            Float % Range(-3.5, 3.5,
                                                          inclusive_start=False,
                                                          inclusive_end=True),
-                                           (-3.49, 0, 3.49))
+                                           (-3.49, 0.0, 3.49))
 }
 float_values = tuple(float_params.values())
 
@@ -154,6 +160,7 @@ collection_params = {
 }
 
 # TODO: What edge cases are there here if any
+# Look at helpers (filter_columns, etc.) to try to determine egde cases
 mdc_cat_val = pd.Series({'a': 'a'}, name='cat')
 mdc_cat_val.index.name = 'id'
 
@@ -200,6 +207,58 @@ def register_test_cases(plugin, all_params):
                 param = all_params[param.base_name]
                 param_dict.update({param.base_name + f'_{i}': param})
 
+            chosen_param_values = {}
+            removed_names = []
+            # Collection params come in without a fully specified type
+            completed_collection_params = {}
+            for index, (name, value) in enumerate(param_dict.items()):
+                if value.type == List[Int] or value.type == List[Float]:
+                    selected_value = value.domain[num_functions %
+                                                  len(value.domain)]
+                    selected_name = selected_value.base_name + '_' + name
+                    selected_type = List[selected_value.type]
+                    new_param = Param(name, selected_type,
+                                      selected_value.domain)
+
+                    param_val = []
+                    for val in range(sig.num_outputs):
+                        selected_size = len(selected_value.domain)
+                        param_val.append(
+                            selected_value.domain[selected_size %
+                                                  sig.num_outputs])
+
+                    removed_names.append(name)
+                    completed_collection_params[selected_name] = new_param
+
+                    chosen_param_values.update({selected_name: param_val})
+                elif value.type == Set[Int] or value.type == Set[Float]:
+                    selected_value = value.domain[num_functions %
+                                                  len(value.domain)]
+                    selected_name = selected_value.base_name + '_' + name
+                    selected_type = Set[selected_value.type]
+                    new_param = Param(name, selected_type,
+                                      selected_value.domain)
+
+                    param_val = set()
+                    for val in range(sig.num_outputs):
+                        selected_size = len(selected_value.domain)
+                        param_val.add(
+                            selected_value.domain[selected_size %
+                                                  sig.num_outputs])
+
+                    removed_names.append(name)
+                    completed_collection_params[selected_name] = new_param
+
+                    chosen_param_values.update({selected_name: param_val})
+                else:
+                    domain_size = len(value.domain)
+                    chosen_param_values.update(
+                        {name: value.domain[sig.num_outputs % domain_size]})
+
+            for name in removed_names:
+                param_dict.pop(name)
+            param_dict.update(completed_collection_params)
+
             # This dictionary allows for easy registration of Qiime parameters
             param_name_to_type_dict = \
                 {name: value.type for name, value in param_dict.items()}
@@ -213,40 +272,6 @@ def register_test_cases(plugin, all_params):
             outputs = []
             for i in range(sig.num_outputs):
                 outputs.append((f'output_{i + 1}', EchoOutput))
-
-            chosen_param_values = {}
-            for index, (name, value) in enumerate(param_dict.items()):
-                if value.type == List[Int] or value.type == List[Float]:
-                    param_val = []
-                    for val in range(sig.num_outputs):
-                        domain_size = len(value.domain)
-                        selected_param = \
-                            value.domain[domain_size % sig.num_outputs]
-
-                        selected_size = len(selected_param.domain)
-                        param_val.append(
-                            selected_param.domain[selected_size %
-                                                  sig.num_outputs])
-
-                    chosen_param_values.update({name: param_val})
-                elif value.type == Set[Int] or value.type == Set[Float]:
-                    param_val = set()
-                    for val in range(sig.num_outputs):
-                        domain_size = len(value.domain)
-                        selected_param = \
-                            value.domain[domain_size % sig.num_outputs]
-
-                        selected_size = len(selected_param.domain)
-                        param_val.add(
-                            selected_param.domain[selected_size %
-                                                  sig.num_outputs])
-                    param_val = tuple(param_val)
-
-                    chosen_param_values.update({name: param_val})
-                else:
-                    domain_size = len(value.domain)
-                    chosen_param_values.update(
-                        {name: value.domain[sig.num_outputs % domain_size]})
 
             usage_example = \
                 {action_name: UsageInstantiator(chosen_param_values, outputs,
