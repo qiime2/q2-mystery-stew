@@ -59,6 +59,8 @@ class UsageInstantiator:
         for name, arg in self.inputs_params.items():
             if 'md' in name:
                 arg = arg.to_dataframe()
+                arg = str(arg)
+                arg = arg.replace('[', ':').replace(']', ':')
             elif type(arg) == list or type(arg) == set:
                 arg_str = ''
                 for val in arg:
@@ -160,11 +162,20 @@ collection_params = {
     'float_set': Param('float_set', Set[Float], (float_values))
 }
 
-mdc_cat_val = pd.Series(['a', np.nan], index=['a', 'b'], name='cat')
+mdc_cat_val = pd.Series(['a'], index=['a'], name='cat')
 mdc_cat_val.index.name = 'id'
 
-mdc_num_val = pd.Series([1, np.nan], index=['a', 'b'], name='num')
+mdc_cat_val_nan = pd.Series(['a', np.nan], index=['a', 'b'], name='cat')
+mdc_cat_val_nan.index.name = 'id'
+
+mdc_num_val = pd.Series([1], index=['a'], name='num')
 mdc_num_val.index.name = 'id'
+
+mdc_num_val_nan = pd.Series([1, np.nan], index=['a', 'b'], name='num')
+mdc_num_val_nan.index.name = 'id'
+
+mdc_num_nan = pd.Series([np.nan], index=['a'], name='num')
+mdc_num_nan.index.name = 'id'
 
 all_params = {
     **int_params,
@@ -185,11 +196,21 @@ all_params = {
                             Bool % Choices(True, False), (True, False)),
     # metadata parameters
     'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
-                                 index=pd.Index(['0', '1'], name='id'))),)),
+                                                 index=pd.Index(['0'],
+                                                 name='id'))),
+                                 qiime2.Metadata(pd.DataFrame({'a': '1'},
+                                                 index=pd.Index(['0', '1'],
+                                                 name='id'))),
+                                 qiime2.Metadata(pd.DataFrame({},
+                                                 index=pd.Index(['0'],
+                                                 name='id'))),)),
     'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
-                     (qiime2.CategoricalMetadataColumn(mdc_cat_val),)),
+                     (qiime2.CategoricalMetadataColumn(mdc_cat_val),
+                      qiime2.CategoricalMetadataColumn(mdc_cat_val_nan),)),
     'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
-                     (qiime2.NumericMetadataColumn(mdc_num_val),))
+                     (qiime2.NumericMetadataColumn(mdc_num_val),
+                      qiime2.NumericMetadataColumn(mdc_num_val_nan),
+                      qiime2.NumericMetadataColumn(mdc_num_nan))),
 }
 
 

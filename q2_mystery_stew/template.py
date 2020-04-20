@@ -39,6 +39,8 @@ def write_output(output, **kwargs):
         for name, arg in kwargs.items():
             if 'md' in name:
                 arg = arg.to_dataframe()
+                arg = str(arg)
+                arg = arg.replace('[', ':').replace(']', ':')
             elif type(arg) == list or type(arg) == set:
                 arg_str = ''
                 for val in arg:
