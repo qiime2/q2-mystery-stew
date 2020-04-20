@@ -9,6 +9,7 @@ from qiime2.plugin import Plugin
 from itertools import product
 from collections import namedtuple
 import pandas as pd
+import numpy as np
 
 import qiime2
 from qiime2.plugin import Int, Range, Float, Bool, Str, Choices, List, Set, \
@@ -159,12 +160,10 @@ collection_params = {
     'float_set': Param('float_set', Set[Float], (float_values))
 }
 
-# TODO: What edge cases are there here if any
-# Look at helpers (filter_columns, etc.) to try to determine egde cases
-mdc_cat_val = pd.Series({'a': 'a'}, name='cat')
+mdc_cat_val = pd.Series(['a', np.nan], index=['a', 'b'], name='cat')
 mdc_cat_val.index.name = 'id'
 
-mdc_num_val = pd.Series({'a': 1}, name='num')
+mdc_num_val = pd.Series([1, np.nan], index=['a', 'b'], name='num')
 mdc_num_val.index.name = 'id'
 
 all_params = {
@@ -186,7 +185,7 @@ all_params = {
                             Bool % Choices(True, False), (True, False)),
     # metadata parameters
     'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
-                                 index=pd.Index(['0'], name='id'))),)),
+                                 index=pd.Index(['0', '1'], name='id'))),)),
     'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
                      (qiime2.CategoricalMetadataColumn(mdc_cat_val),)),
     'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
