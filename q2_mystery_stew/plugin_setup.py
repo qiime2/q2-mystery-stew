@@ -17,6 +17,8 @@ from qiime2.plugin import Int, Range, Float, Bool, Str, Choices, List, Set, \
                           UsageAction, UsageInputs, UsageOutputNames
 
 import q2_mystery_stew
+from .type import IntSequence1
+from .format import IntSequenceFormat, IntSequenceDirectoryFormat
 from q2_mystery_stew.template import rewrite_function_signature, \
                                      function_template_1output, \
                                      function_template_2output, \
@@ -43,8 +45,9 @@ function_templates = (function_template_1output,
 
 
 class UsageInstantiator:
-    def __init__(self, inputs_params, outputs, name):
-        self.inputs_params = inputs_params
+    def __init__(self, input_, params, outputs, name):
+        self.inputs = input_
+        self.params = params
         self.outputs = outputs
         self.name = name
         self.output_names = {k: k for k, _ in self.outputs}
@@ -52,11 +55,11 @@ class UsageInstantiator:
     def __call__(self, use):
         use.action(
             UsageAction(plugin_id='mystery_stew', action_id=self.name),
-            UsageInputs(**self.inputs_params),
+            UsageInputs(**self.inputs, **self.params),
             UsageOutputNames(**self.output_names),
         )
 
-        for name, arg in self.inputs_params.items():
+        for name, arg in self.params.items():
             if 'md' in name:
                 arg = arg.to_dataframe()
                 arg = str(arg)
@@ -283,8 +286,10 @@ def register_test_cases(plugin, all_params):
             param_name_to_type_dict = \
                 {name: value.type for name, value in param_dict.items()}
 
+            input_ = {'input': qiime2.Artifact.import_data(IntSequence1,
+                                                           [0, 1, 2])}
             rewrite_function_signature(sig.template,
-                                       {},
+                                       {'input': IntSequenceFormat},
                                        param_name_to_type_dict,
                                        sig.num_outputs,
                                        action_name)
@@ -294,12 +299,12 @@ def register_test_cases(plugin, all_params):
                 outputs.append((f'output_{i + 1}', EchoOutput))
 
             usage_example = \
-                {action_name: UsageInstantiator(chosen_param_values, outputs,
-                                                action_name)}
+                {action_name: UsageInstantiator(input_, chosen_param_values,
+                                                outputs, action_name)}
 
             plugin.methods.register_function(
                 function=sig.template,
-                inputs={},
+                inputs={'input': IntSequence1},
                 parameters=param_name_to_type_dict,
                 outputs=outputs,
                 name=action_name,
@@ -310,8 +315,23 @@ def register_test_cases(plugin, all_params):
             num_functions += 1
 
 
-register_test_cases(plugin, all_params)
-
-plugin.register_formats(EchoOutputFmt, EchoOutputDirFmt)
-plugin.register_semantic_types(EchoOutput)
+plugin.register_formats(EchoOutputFmt, EchoOutputDirFmt, IntSequenceFormat,
+                        IntSequenceDirectoryFormat)
+plugin.register_semantic_types(EchoOutput, IntSequence1)
 plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
+plugin.register_semantic_type_to_format(
+    IntSequence1,
+    artifact_format=IntSequenceDirectoryFormat
+)
+
+
+@plugin.register_transformer
+def _7(data: list) -> IntSequenceFormat:
+    ff = IntSequenceFormat()
+    with ff.open() as fh:
+        for int_ in data:
+            fh.write('%d\n' % int_)
+    return ff
+
+
+register_test_cases(plugin, all_params)

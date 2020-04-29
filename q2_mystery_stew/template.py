@@ -24,7 +24,8 @@ def rewrite_function_signature(function, inputs, params, num_outputs, name):
                                    annotation=type_)
                         for name, type_ in params.items()])
 
-    annotations = inputs
+    annotations = {}
+    annotations.update(inputs)
     annotations.update(params)
     annotations.update({'return': output})
 
