@@ -8,8 +8,8 @@
 
 import qiime2.plugin as plugin
 
-SingleInt = plugin.SemanticType('SingleInt')
-IntSequence = plugin.SemanticType('IntSequence')
+SingleInt1 = plugin.SemanticType('SingleInt1')
+SingleInt2 = plugin.SemanticType('SingleInt2')
 
 IntWrapper = plugin.SemanticType('IntWrapper', field_names='first')
 TwoIntWrapper = \
@@ -20,4 +20,5 @@ _variants = [
     TwoIntWrapper.field['first'], TwoIntWrapper.field['second'],
 ]
 
-WrappedInt = plugin.SemanticType('WrappedInt', variant_of=_variants)
+WrappedInt1 = plugin.SemanticType('WrappedInt1', variant_of=_variants)
+WrappedInt2 = plugin.SemanticType('WrappedInt2', variant_of=_variants)

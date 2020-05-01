@@ -6,8 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 from itertools import product
-from collections import namedtuple, Counter
-# from tempfile import
+from collections import namedtuple
 import pandas as pd
 import numpy as np
 
@@ -15,17 +14,12 @@ import qiime2
 from qiime2.plugin import (Plugin, Int, Range, Float, Bool, Str, Choices,
                            List, Set, Metadata, MetadataColumn, Categorical,
                            Numeric, UsageAction, UsageInputs,
-                           UsageOutputNames, Properties)
+                           UsageOutputNames)
 
 import q2_mystery_stew
-from .type import (SingleInt, IntSequence, IntWrapper, TwoIntWrapper,
-                   WrappedInt)
-from .format import (
-    SingleIntFormat,
-    SingleIntDirectoryFormat,
-    IntSequenceFormat,
-    IntSequenceDirectoryFormat
-)
+from .type import (SingleInt1, SingleInt2, IntWrapper, TwoIntWrapper,
+                   WrappedInt1, WrappedInt2)
+from .format import SingleIntFormat, SingleIntDirectoryFormat
 from q2_mystery_stew.template import (rewrite_function_signature,
                                       function_template_1output,
                                       function_template_2output,
@@ -224,6 +218,27 @@ all_params = {
 }
 
 
+# TODO: Next step is to actually implement inputs. Some high level plans are as
+# follows.
+#
+# We have to test the following cases (and maybe some others):
+#   foo
+#   foo | bar
+#   baz[foo]
+#   baz[foo | bar]
+#   baz[foo, bar]
+#   foo % Properties(bar)
+#   foo % Properties(exclude = bar)
+#
+# And so on. I believe the following types can be used for the above cases:
+#   SingleInt1
+#   SingleInt1 | SingleInt2
+#   IntWrapper[WrappedInt1]
+#   IntWrapper[WrappedInt1 | WrappedInt2]
+#   2IntWrapper[WrappedInt1, WrappedInt2]
+#
+# I am less sure of the two `Properties` cases, but I'll figure it out when I
+# get the chance to dig deeper and determine what `Properties` does
 def register_test_cases(plugin, all_params):
     num_functions = 0
     signatures = generate_signatures()
@@ -293,10 +308,10 @@ def register_test_cases(plugin, all_params):
             param_name_to_type_dict = \
                 {name: value.type for name, value in param_dict.items()}
 
-            input_ = {'input': qiime2.Artifact.import_data(IntSequence,
-                                                           [1, 2, 3])}
+            # TODO: Actually implement inputs
+            input_ = {'input': qiime2.Artifact.import_data(SingleInt1, 1)}
             rewrite_function_signature(sig.template,
-                                       {'input': IntSequenceFormat},
+                                       {'input': SingleIntFormat},
                                        param_name_to_type_dict,
                                        sig.num_outputs,
                                        action_name)
@@ -311,7 +326,7 @@ def register_test_cases(plugin, all_params):
 
             plugin.methods.register_function(
                 function=sig.template,
-                inputs={'input': IntSequence},
+                inputs={'input': SingleInt1},
                 parameters=param_name_to_type_dict,
                 outputs=outputs,
                 name=action_name,
@@ -322,16 +337,15 @@ def register_test_cases(plugin, all_params):
             num_functions += 1
 
 
-plugin.register_semantic_types(SingleInt, IntSequence, IntWrapper,
-                               TwoIntWrapper, WrappedInt, EchoOutput)
+plugin.register_semantic_types(SingleInt1, SingleInt2, IntWrapper,
+                               TwoIntWrapper, WrappedInt1, WrappedInt2,
+                               EchoOutput)
 
 plugin.register_formats(SingleIntFormat, SingleIntDirectoryFormat,
-                        IntSequenceFormat, IntSequenceDirectoryFormat,
                         EchoOutputFmt, EchoOutputDirFmt)
 
-plugin.register_semantic_type_to_format(SingleInt, SingleIntDirectoryFormat)
-plugin.register_semantic_type_to_format(IntSequence,
-                                        IntSequenceDirectoryFormat)
+plugin.register_semantic_type_to_format(SingleInt1, SingleIntDirectoryFormat)
+plugin.register_semantic_type_to_format(SingleInt2, SingleIntDirectoryFormat)
 plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
 
 
@@ -351,29 +365,6 @@ def _2(data: int) -> SingleIntFormat:
 def _5(ff: SingleIntFormat) -> int:
     with ff.open() as fh:
         return int(fh.read())
-
-
-@plugin.register_transformer()
-def _7(data: list) -> IntSequenceFormat:
-    ff = IntSequenceFormat()
-    with ff.open() as fh:
-        for int_ in data:
-            fh.write('%d\n' % int_)
-    return ff
-
-
-# TODO: We might not need this one
-@plugin.register_transformer
-def _9(ff: IntSequenceFormat) -> list:
-    with ff.open() as fh:
-        return list(map(int, fh.readlines()))
-
-
-# TODO: We probably don't need this one
-@plugin.register_transformer
-def _10(ff: IntSequenceFormat) -> Counter:
-    with ff.open() as fh:
-        return Counter(map(int, fh.readlines()))
 
 
 register_test_cases(plugin, all_params)
