@@ -5,26 +5,33 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-from qiime2.plugin import Plugin
 from itertools import product
-from collections import namedtuple
+from collections import namedtuple, Counter
+# from tempfile import
 import pandas as pd
 import numpy as np
 
 import qiime2
-from qiime2.plugin import Int, Range, Float, Bool, Str, Choices, List, Set, \
-                          Metadata, MetadataColumn, Categorical, Numeric, \
-                          UsageAction, UsageInputs, UsageOutputNames
+from qiime2.plugin import (Plugin, Int, Range, Float, Bool, Str, Choices,
+                           List, Set, Metadata, MetadataColumn, Categorical,
+                           Numeric, UsageAction, UsageInputs,
+                           UsageOutputNames, Properties)
 
 import q2_mystery_stew
-from .type import IntSequence1
-from .format import IntSequenceFormat, IntSequenceDirectoryFormat
-from q2_mystery_stew.template import rewrite_function_signature, \
-                                     function_template_1output, \
-                                     function_template_2output, \
-                                     function_template_3output
-from q2_mystery_stew.templatable_echo_fmt import EchoOutput, EchoOutputFmt, \
-                                                 EchoOutputDirFmt
+from .type import (SingleInt, IntSequence, IntWrapper, TwoIntWrapper,
+                   WrappedInt)
+from .format import (
+    SingleIntFormat,
+    SingleIntDirectoryFormat,
+    IntSequenceFormat,
+    IntSequenceDirectoryFormat
+)
+from q2_mystery_stew.template import (rewrite_function_signature,
+                                      function_template_1output,
+                                      function_template_2output,
+                                      function_template_3output)
+from q2_mystery_stew.templatable_echo_fmt import (EchoOutput, EchoOutputFmt,
+                                                  EchoOutputDirFmt)
 
 plugin = Plugin(
     name='mystery-stew',
@@ -286,8 +293,8 @@ def register_test_cases(plugin, all_params):
             param_name_to_type_dict = \
                 {name: value.type for name, value in param_dict.items()}
 
-            input_ = {'input': qiime2.Artifact.import_data(IntSequence1,
-                                                           [0, 1, 2])}
+            input_ = {'input': qiime2.Artifact.import_data(IntSequence,
+                                                           [1, 2, 3])}
             rewrite_function_signature(sig.template,
                                        {'input': IntSequenceFormat},
                                        param_name_to_type_dict,
@@ -304,7 +311,7 @@ def register_test_cases(plugin, all_params):
 
             plugin.methods.register_function(
                 function=sig.template,
-                inputs={'input': IntSequence1},
+                inputs={'input': IntSequence},
                 parameters=param_name_to_type_dict,
                 outputs=outputs,
                 name=action_name,
@@ -315,23 +322,58 @@ def register_test_cases(plugin, all_params):
             num_functions += 1
 
 
-plugin.register_formats(EchoOutputFmt, EchoOutputDirFmt, IntSequenceFormat,
-                        IntSequenceDirectoryFormat)
-plugin.register_semantic_types(EchoOutput, IntSequence1)
+plugin.register_semantic_types(SingleInt, IntSequence, IntWrapper,
+                               TwoIntWrapper, WrappedInt, EchoOutput)
+
+plugin.register_formats(SingleIntFormat, SingleIntDirectoryFormat,
+                        IntSequenceFormat, IntSequenceDirectoryFormat,
+                        EchoOutputFmt, EchoOutputDirFmt)
+
+plugin.register_semantic_type_to_format(SingleInt, SingleIntDirectoryFormat)
+plugin.register_semantic_type_to_format(IntSequence,
+                                        IntSequenceDirectoryFormat)
 plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
-plugin.register_semantic_type_to_format(
-    IntSequence1,
-    artifact_format=IntSequenceDirectoryFormat
-)
 
 
+# These transformers are being registered in this file right now because they
+# are needed by `register_test_cases` so they need to be registered before it
+# is called
 @plugin.register_transformer
+def _2(data: int) -> SingleIntFormat:
+    ff = SingleIntFormat()
+    with ff.open() as fh:
+        fh.write('%d\n' % data)
+    return ff
+
+
+# TODO: We might not need this one
+@plugin.register_transformer
+def _5(ff: SingleIntFormat) -> int:
+    with ff.open() as fh:
+        return int(fh.read())
+
+
+@plugin.register_transformer()
 def _7(data: list) -> IntSequenceFormat:
     ff = IntSequenceFormat()
     with ff.open() as fh:
         for int_ in data:
             fh.write('%d\n' % int_)
     return ff
+
+
+# TODO: We might not need this one
+@plugin.register_transformer
+def _9(ff: IntSequenceFormat) -> list:
+    with ff.open() as fh:
+        return list(map(int, fh.readlines()))
+
+
+# TODO: We probably don't need this one
+@plugin.register_transformer
+def _10(ff: IntSequenceFormat) -> Counter:
+    with ff.open() as fh:
+        return Counter(map(int, fh.readlines()))
 
 
 register_test_cases(plugin, all_params)
