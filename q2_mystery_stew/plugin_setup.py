@@ -14,7 +14,7 @@ import qiime2
 from qiime2.plugin import (Plugin, Int, Range, Float, Bool, Str, Choices,
                            List, Set, Metadata, MetadataColumn, Categorical,
                            Numeric, UsageAction, UsageInputs,
-                           UsageOutputNames)
+                           UsageOutputNames, Properties)
 
 import q2_mystery_stew
 from .type import (SingleInt1, SingleInt2, IntWrapper, TwoIntWrapper,
@@ -37,8 +37,9 @@ plugin = Plugin(
     short_description='Plugin for generating arbitrary QIIME 2 actions.'
 )
 
-Sig = namedtuple('Sig', ['num_inputs', 'num_outputs', 'template'])
+Sig = namedtuple('Sig', ['num_params', 'num_outputs', 'template'])
 Param = namedtuple('Param', ['base_name', 'type', 'domain'])
+Input = namedtuple('Input', ['base_name', 'qiime_type', 'format', 'domain'])
 
 function_templates = (function_template_1output,
                       function_template_2output,
@@ -99,9 +100,9 @@ class UsageInstantiator:
 
 
 def generate_signatures():
-    for num_inputs in range(1, len(function_templates) + 1):
+    for num_params in range(1, len(function_templates) + 1):
         for num_outputs in range(1, len(function_templates) + 1):
-            yield Sig(num_inputs, num_outputs,
+            yield Sig(num_params, num_outputs,
                       function_templates[num_outputs - 1])
 
 
@@ -217,7 +218,6 @@ all_params = {
                       qiime2.NumericMetadataColumn(mdc_num_nan))),
 }
 
-
 # TODO: Next step is to actually implement inputs. Some high level plans are as
 # follows.
 #
@@ -235,17 +235,90 @@ all_params = {
 #   SingleInt1 | SingleInt2
 #   IntWrapper[WrappedInt1]
 #   IntWrapper[WrappedInt1 | WrappedInt2]
-#   2IntWrapper[WrappedInt1, WrappedInt2]
+#   TwoIntWrapper[WrappedInt1, WrappedInt2]
 #
 # I am less sure of the two `Properties` cases, but I'll figure it out when I
-# get the chance to dig deeper and determine what `Properties` does
-def register_test_cases(plugin, all_params):
+# get the chance to dig deeper and determine what `Properties` does. It'll
+# start with something suepr simple like
+#
+#   SingleInt1 % Properties('A')
+#   SingleInt1 % Properties(exclude=('A'))
+#
+# We should be able to select from these in a similar manner to the parameters.
+# I think we can continue to iterate over params as before, and insert a
+# mechanism to select from an iterable of inputs
+#
+# Create iterable of inputs as below. When registering a function, select a
+# number of inputs, select that many inputs from the iterable, use em
+inputs = (
+    Input('SingleInt1', SingleInt1, SingleIntFormat, (-1, 0, 1)),
+    # Input('SingleInt1USingleInt2', SingleInt1 | SingleInt2, SingleIntFormat,
+    #        (1, -1, 0)),
+    # Input('WrappedInt', IntWrapper[WrappedInt1], (0, 1, -1)),
+    # Input('WrappedUnion', IntWrapper[WrappedInt1 | WrappedInt2], (-1, 0, 1)),
+    # Input('TwoWrappedInts',
+    #       TwoIntWrapper[WrappedInt1, WrappedInt2], (1, -1, 0)),
+    # Input('SingleIntProperty', SingleInt1 % Properties('A'), (0, 1, -1)),
+    # Input('SingleIntPropertyExclude', SingleInt1 % Properties(exclude=('A')),
+    #       (-1, 0, 1))
+)
+
+
+# Selecting a value via the usage of `length(iterable) % some_value` as an
+# index allows for a fairly arbitrary selection of a value without resorting to
+# any form of randomization
+# TODO: I think this can be significantly reworked to remove the need for so
+# many dicts instead making better use of the named tuples
+def register_test_cases(plugin, inputs, all_params):
     num_functions = 0
     signatures = generate_signatures()
 
     for sig in signatures:
-        for params in product(all_params.values(), repeat=sig.num_inputs):
+        for params in product(all_params.values(), repeat=sig.num_params):
             action_name = f'func_{num_functions}'
+
+            input_name_to_type_dict = {}
+            input_name_to_format_dict = {}
+            chosen_input_values = {}
+            num_inputs = (num_functions % 3) + 1
+
+            input_index = num_functions % len(inputs)
+            input_ = inputs[input_index]
+            name = input_.base_name + '_0'
+
+            input_name_to_type_dict.update({name: input_.qiime_type})
+            input_name_to_format_dict.update({name: input_.format})
+
+            domain_size = len(input_.domain)
+            chosen_input_values.update(
+                {name: qiime2.Artifact.import_data(input_.qiime_type,
+                 input_.domain[sig.num_outputs % domain_size])})
+
+            if num_inputs > 1:
+                input_index = (num_functions + num_inputs) % len(inputs)
+                input_ = inputs[input_index]
+                name = input_.base_name + '_1'
+
+                input_name_to_type_dict.update({name: input_.qiime_type})
+                input_name_to_format_dict.update({name: input_.format})
+
+                domain_size = len(input_.domain)
+                chosen_input_values.update(
+                    {name: qiime2.Artifact.import_data(input_.qiime_type,
+                     input_.domain[sig.num_outputs % domain_size])})
+
+            if num_inputs > 2:
+                input_index = (num_functions + sig.num_params) % len(inputs)
+                input_ = inputs[input_index]
+                name = input_.base_name + '_2'
+
+                input_name_to_type_dict.update({name: input_.qiime_type})
+                input_name_to_format_dict.update({name: input_.format})
+
+                domain_size = len(input_.domain)
+                chosen_input_values.update(
+                    {name: qiime2.Artifact.import_data(input_.qiime_type,
+                     input_.domain[sig.num_outputs % domain_size])})
 
             param_dict = {}
             for i, param in enumerate(params):
@@ -254,7 +327,10 @@ def register_test_cases(plugin, all_params):
 
             chosen_param_values = {}
             removed_names = []
-            # Collection params come in without a fully specified type
+            # Collection params come in without a fully specified type, they
+            # know they are a List or a Set of Ints or Floats, but they don't
+            # yet know what types of Ints or Floats they are going to be
+            # composed of
             completed_collection_params = {}
             for index, (name, value) in enumerate(param_dict.items()):
                 if value.type == List[Int] or value.type == List[Float]:
@@ -308,10 +384,8 @@ def register_test_cases(plugin, all_params):
             param_name_to_type_dict = \
                 {name: value.type for name, value in param_dict.items()}
 
-            # TODO: Actually implement inputs
-            input_ = {'input': qiime2.Artifact.import_data(SingleInt1, 1)}
             rewrite_function_signature(sig.template,
-                                       {'input': SingleIntFormat},
+                                       input_name_to_format_dict,
                                        param_name_to_type_dict,
                                        sig.num_outputs,
                                        action_name)
@@ -321,12 +395,13 @@ def register_test_cases(plugin, all_params):
                 outputs.append((f'output_{i + 1}', EchoOutput))
 
             usage_example = \
-                {action_name: UsageInstantiator(input_, chosen_param_values,
-                                                outputs, action_name)}
+                {action_name: UsageInstantiator(chosen_input_values,
+                                                chosen_param_values, outputs,
+                                                action_name)}
 
             plugin.methods.register_function(
                 function=sig.template,
-                inputs={'input': SingleInt1},
+                inputs=input_name_to_type_dict,
                 parameters=param_name_to_type_dict,
                 outputs=outputs,
                 name=action_name,
@@ -353,7 +428,7 @@ plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
 # are needed by `register_test_cases` so they need to be registered before it
 # is called
 @plugin.register_transformer
-def _2(data: int) -> SingleIntFormat:
+def _0(data: int) -> SingleIntFormat:
     ff = SingleIntFormat()
     with ff.open() as fh:
         fh.write('%d\n' % data)
@@ -362,9 +437,9 @@ def _2(data: int) -> SingleIntFormat:
 
 # TODO: We might not need this one
 @plugin.register_transformer
-def _5(ff: SingleIntFormat) -> int:
+def _1(ff: SingleIntFormat) -> int:
     with ff.open() as fh:
         return int(fh.read())
 
 
-register_test_cases(plugin, all_params)
+register_test_cases(plugin, inputs, all_params)
