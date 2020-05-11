@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2020, QIIME 2 development team.
+# Copyright (c) 2020, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -12,12 +12,9 @@ SingleInt1 = plugin.SemanticType('SingleInt1')
 SingleInt2 = plugin.SemanticType('SingleInt2')
 
 IntWrapper = plugin.SemanticType('IntWrapper', field_names='first')
-TwoIntWrapper = \
-    plugin.SemanticType('TwoIntWrapper', field_names=['first', 'second'])
 
 _variants = [
     IntWrapper.field['first'],
-    TwoIntWrapper.field['first'], TwoIntWrapper.field['second'],
 ]
 
 WrappedInt1 = plugin.SemanticType('WrappedInt1', variant_of=_variants)

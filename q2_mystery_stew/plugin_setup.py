@@ -17,10 +17,9 @@ from qiime2.plugin import (Plugin, Int, Range, Float, Bool, Str, Choices,
                            UsageOutputNames, Properties)
 
 import q2_mystery_stew
-from .type import (SingleInt1, SingleInt2, IntWrapper, TwoIntWrapper,
+from .type import (SingleInt1, SingleInt2, IntWrapper,
                    WrappedInt1, WrappedInt2)
-from .format import (SingleIntFormat, SingleIntDirectoryFormat,
-                     IntSequenceFormat, IntSequenceDirectoryFormat)
+from .format import SingleIntFormat, SingleIntDirectoryFormat
 from q2_mystery_stew.template import (rewrite_function_signature,
                                       function_template_1output,
                                       function_template_2output,
@@ -33,7 +32,7 @@ plugin = Plugin(
     version=q2_mystery_stew.__version__,
     website='https://github.com/qiime2/q2-mystery-stew',
     package='q2_mystery_stew',
-    description=('This QIIME 2 plugin Templates out arbitrary QIIME 2 actions '
+    description=('This QIIME 2 plugin templates out arbitrary QIIME 2 actions '
                  'to test interfaces. '),
     short_description='Plugin for generating arbitrary QIIME 2 actions.'
 )
@@ -48,21 +47,51 @@ function_templates = (function_template_1output,
 
 
 class UsageInstantiator:
-    def __init__(self, input_, params, outputs, name):
-        self.inputs = input_
+    def __init__(self, inputs, params, outputs, name):
+        self.inputs = inputs
         self.params = params
         self.outputs = outputs
         self.name = name
         self.output_names = {k: k for k, _ in self.outputs}
 
+        # This is a bit of a hack. I don't want to explicitly use IntWrapper
+        # because I want the implementation to be extensible, but when I got
+        # the name of the wrapper type and parsed it to a qiime type it gave me
+        # a complete TypeExp which didn't allow me to set what inner type I
+        # wanted. So any types that may be encountered with a union as a field
+        # must be in this dict
+        self.types = {'IntWrapper': IntWrapper}
+
     def __call__(self, use):
+        inputs = {}
+        for name, input_ in self.inputs.items():
+            if qiime2.core.type.is_union(input_.qiime_type):
+                union = input_.qiime_type.unpack_union()
+                types = [type_ for type_ in union]
+
+                type_ = types[len(self.inputs) % len(types)]
+            elif len(input_.qiime_type.fields) > 0 and \
+                    qiime2.core.type.is_union(input_.qiime_type.fields[0]):
+                outter_type = self.types[input_.qiime_type.name]
+
+                union = input_.qiime_type.fields[0].unpack_union()
+                types = [type_ for type_ in union]
+
+                inner_type = types[len(self.inputs) % len(types)]
+                type_ = outter_type[inner_type]
+            else:
+                type_ = input_.qiime_type
+
+            value = input_.domain[len(self.outputs) % len(input_.domain)]
+            inputs[name] = factory(type_, value)
+
         use.action(
             UsageAction(plugin_id='mystery_stew', action_id=self.name),
-            UsageInputs(**self.inputs, **self.params),
+            UsageInputs(**inputs, **self.params),
             UsageOutputNames(**self.output_names),
         )
 
-        for name, arg in chain(self.inputs.items(), self.params.items()):
+        for name, arg in chain(inputs.items(), self.params.items()):
             if 'md' in name:
                 arg = arg.to_dataframe()
                 arg = str(arg)
@@ -186,87 +215,52 @@ mdc_num_nan = pd.Series([np.nan], index=['a'], name='num')
 mdc_num_nan.index.name = 'id'
 
 all_params = {
-    # **int_params,
-    # **float_params,
-    # **collection_params,
-    # # non-numerical parameters
+    **int_params,
+    **float_params,
+    **collection_params,
+    # non-numerical parameters
     'string': Param('string',
                     Str, ('', 'some string')),
-    # 'string_choices': Param('string_choices',
-    #                         Str % Choices('A', 'B'), ('A', 'B')),
-    # 'boolean': Param('boolean',
-    #                  Bool, (True, False)),
-    # 'boolean_true': Param('boolean_true',
-    #                       Bool % Choices(True), (True,)),
-    # 'boolean_false': Param('boolean_false',
-    #                        Bool % Choices(False), (False,)),
-    # 'boolean_choice': Param('boolean_choice',
-    #                         Bool % Choices(True, False), (True, False)),
-    # # metadata parameters
-    # 'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
-    #                                              index=pd.Index(['0'],
-    #                                              name='id'))),
-    #                              qiime2.Metadata(pd.DataFrame({'a': '1'},
-    #                                              index=pd.Index(['0', '1'],
-    #                                              name='id'))),
-    #                              qiime2.Metadata(pd.DataFrame({},
-    #                                              index=pd.Index(['0'],
-    #                                              name='id'))),)),
-    # 'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
-    #                  (qiime2.CategoricalMetadataColumn(mdc_cat_val),
-    #                   qiime2.CategoricalMetadataColumn(mdc_cat_val_nan),)),
-    # 'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
-    #                  (qiime2.NumericMetadataColumn(mdc_num_val),
-    #                   qiime2.NumericMetadataColumn(mdc_num_val_nan),
-    #                   qiime2.NumericMetadataColumn(mdc_num_nan))),
+    'string_choices': Param('string_choices',
+                            Str % Choices('A', 'B'), ('A', 'B')),
+    'boolean': Param('boolean',
+                     Bool, (True, False)),
+    'boolean_true': Param('boolean_true',
+                          Bool % Choices(True), (True,)),
+    'boolean_false': Param('boolean_false',
+                           Bool % Choices(False), (False,)),
+    'boolean_choice': Param('boolean_choice',
+                            Bool % Choices(True, False), (True, False)),
+    # metadata parameters
+    'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
+                                                 index=pd.Index(['0'],
+                                                 name='id'))),
+                                 qiime2.Metadata(pd.DataFrame({'a': '1'},
+                                                 index=pd.Index(['0', '1'],
+                                                 name='id'))),
+                                 qiime2.Metadata(pd.DataFrame({},
+                                                 index=pd.Index(['0'],
+                                                 name='id'))),)),
+    'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
+                     (qiime2.CategoricalMetadataColumn(mdc_cat_val),
+                      qiime2.CategoricalMetadataColumn(mdc_cat_val_nan),)),
+    'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
+                     (qiime2.NumericMetadataColumn(mdc_num_val),
+                      qiime2.NumericMetadataColumn(mdc_num_val_nan),
+                      qiime2.NumericMetadataColumn(mdc_num_nan))),
 }
 
-# TODO: Next step is to actually implement inputs. Some high level plans are as
-# follows.
-#
-# We have to test the following cases (and maybe some others):
-#   foo
-#   foo | bar
-#   baz[foo]
-#   baz[foo | bar]
-#   baz[foo, bar]
-#   foo % Properties(bar)
-#   foo % Properties(exclude = bar)
-#
-# And so on. I believe the following types can be used for the above cases:
-#   SingleInt1
-#   SingleInt1 | SingleInt2
-#   IntWrapper[WrappedInt1]
-#   IntWrapper[WrappedInt1 | WrappedInt2]
-#   TwoIntWrapper[WrappedInt1, WrappedInt2]
-#
-# I am less sure of the two `Properties` cases, but I'll figure it out when I
-# get the chance to dig deeper and determine what `Properties` does. It'll
-# start with something suepr simple like
-#
-#   SingleInt1 % Properties('A')
-#   SingleInt1 % Properties(exclude=('A'))
-#
-# We should be able to select from these in a similar manner to the parameters.
-# I think we can continue to iterate over params as before, and insert a
-# mechanism to select from an iterable of inputs
-#
-# Create iterable of inputs as below. When registering a function, select a
-# number of inputs, select that many inputs from the iterable, use em
-# We need to create artifacts as a concrete type, we can accept SingleInt1 | SingleInt2
-# as an input type, but the actual artifact must be one type or the other
 inputs = (
-    # Input('SingleInt1', SingleInt1, SingleIntFormat, (-1, 0, 1)),
-    # Input('SingleInt1USingleInt2', SingleInt1 | SingleInt2, SingleIntFormat,
-    #        (1, -1, 0)),
+    Input('SingleInt1', SingleInt1, SingleIntFormat, (-1, 0, 1)),
+    Input('SingleIntProperty', SingleInt1 % Properties('A'),
+          SingleIntFormat, (-1, 0, 1)),
+    Input('SingleIntPropertyExclude', SingleInt1 % Properties(exclude=('A')),
+          SingleIntFormat, (1, -1, -0)),
+    Input('SingleInt1USingleInt2', SingleInt1 | SingleInt2, SingleIntFormat,
+          (1, -1, 0)),
     Input('WrappedInt', IntWrapper[WrappedInt1], SingleIntFormat, (0, 1, -1)),
-    # Input('WrappedUnion', IntWrapper[WrappedInt1 | WrappedInt2], (-1, 0, 1)),
-    # Input('TwoWrappedInts',
-    #       TwoIntWrapper[WrappedInt1, WrappedInt2], (1, -1, 0)),
-    # Input('TwoWrappedIntsUnion', TwoIntWrapper[WrappedInt1 | WrappedInt2, WrappedInt1 | WrappedInt2], (0, 1, -1))
-    # Input('SingleIntProperty', SingleInt1 % Properties('A'), SingleIntFormat, (-1, 0, 1)),
-    # Input('SingleIntPropertyExclude', SingleInt1 % Properties(exclude=('A')),
-    #       (1, -1, -0))
+    Input('WrappedUnion', IntWrapper[WrappedInt1 | WrappedInt2],
+          SingleIntFormat, (-1, 0, 1)),
 )
 
 
@@ -277,7 +271,6 @@ def factory(format_, value):
 # Selecting a value via the usage of `length(iterable) % some_value` as an
 # index allows for a fairly arbitrary selection of a value without resorting to
 # any form of randomization
-# TODO: Make factories for inputs
 def register_test_cases(plugin, input, all_params):
     num_functions = 0
     signatures = generate_signatures()
@@ -288,46 +281,23 @@ def register_test_cases(plugin, input, all_params):
 
             input_name_to_type_dict = {}
             input_name_to_format_dict = {}
-            chosen_input_values = {}
+            input_name_to_named_tuple_dict = {}
             num_inputs = (num_functions % 3) + 1
+            for input_num in range(num_inputs):
+                if input_num == 0:
+                    input_index = num_functions % len(inputs)
+                elif input_num == 1:
+                    input_index = (num_functions + num_inputs) % len(inputs)
+                elif input_num == 2:
+                    input_index = \
+                        (num_functions + sig.num_params) % len(inputs)
 
-            input_index = num_functions % len(inputs)
-            input_ = inputs[input_index]
-            name = input_.base_name + '_0'
-
-            input_name_to_type_dict.update({name: input_.qiime_type})
-            input_name_to_format_dict.update({name: input_.format})
-
-            domain_size = len(input_.domain)
-            chosen_input_values.update(
-                {name: qiime2.Artifact.import_data(input_.qiime_type,
-                 input_.domain[sig.num_outputs % domain_size])})
-
-            if num_inputs > 1:
-                input_index = (num_functions + num_inputs) % len(inputs)
                 input_ = inputs[input_index]
-                name = input_.base_name + '_1'
+                name = input_.base_name + f'_{input_num}'
 
                 input_name_to_type_dict.update({name: input_.qiime_type})
                 input_name_to_format_dict.update({name: input_.format})
-
-                domain_size = len(input_.domain)
-                chosen_input_values.update(
-                    {name: qiime2.Artifact.import_data(input_.qiime_type,
-                     input_.domain[sig.num_outputs % domain_size])})
-
-            if num_inputs > 2:
-                input_index = (num_functions + sig.num_params) % len(inputs)
-                input_ = inputs[input_index]
-                name = input_.base_name + '_2'
-
-                input_name_to_type_dict.update({name: input_.qiime_type})
-                input_name_to_format_dict.update({name: input_.format})
-
-                domain_size = len(input_.domain)
-                chosen_input_values.update(
-                    {name: qiime2.Artifact.import_data(input_.qiime_type,
-                     input_.domain[sig.num_outputs % domain_size])})
+                input_name_to_named_tuple_dict.update({name: input_})
 
             param_dict = {}
             for i, param in enumerate(params):
@@ -404,7 +374,7 @@ def register_test_cases(plugin, input, all_params):
                 outputs.append((f'output_{i + 1}', EchoOutput))
 
             usage_example = \
-                {action_name: UsageInstantiator(chosen_input_values,
+                {action_name: UsageInstantiator(input_name_to_named_tuple_dict,
                                                 chosen_param_values, outputs,
                                                 action_name)}
 
@@ -419,15 +389,12 @@ def register_test_cases(plugin, input, all_params):
             )
 
             num_functions += 1
-    # raise ValueError(num_functions)
 
 
 plugin.register_semantic_types(SingleInt1, SingleInt2, IntWrapper,
-                               TwoIntWrapper, WrappedInt1, WrappedInt2,
-                               EchoOutput)
+                               WrappedInt1, WrappedInt2, EchoOutput)
 
 plugin.register_formats(SingleIntFormat, SingleIntDirectoryFormat,
-                        IntSequenceFormat, IntSequenceDirectoryFormat,
                         EchoOutputFmt, EchoOutputDirFmt)
 
 plugin.register_semantic_type_to_format(SingleInt1, SingleIntDirectoryFormat)
@@ -436,29 +403,18 @@ plugin.register_semantic_type_to_format(SingleInt2, SingleIntDirectoryFormat)
 plugin.register_semantic_type_to_format(IntWrapper[WrappedInt1 | WrappedInt2],
                                         SingleIntDirectoryFormat)
 
-plugin.register_semantic_type_to_format(
-    TwoIntWrapper[WrappedInt1 | WrappedInt2, WrappedInt1 | WrappedInt2],
-    IntSequenceDirectoryFormat)
-
 plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
 
 
-# These transformers are being registered in this file right now because they
-# are needed by `register_test_cases` so they need to be registered before it
-# is called
+# This transformer is being registered in this file right now because it is
+# needed by `register_test_cases` so it needs to be registered before it is
+# called
 @plugin.register_transformer
 def _0(data: int) -> SingleIntFormat:
     ff = SingleIntFormat()
     with ff.open() as fh:
         fh.write('%d\n' % data)
     return ff
-
-
-# TODO: We might not need this one
-@plugin.register_transformer
-def _1(ff: SingleIntFormat) -> int:
-    with ff.open() as fh:
-        return int(fh.read())
 
 
 register_test_cases(plugin, inputs, all_params)
