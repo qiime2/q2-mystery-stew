@@ -5,7 +5,7 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-from itertools import product
+from itertools import product, chain
 from collections import namedtuple
 import pandas as pd
 import numpy as np
@@ -19,7 +19,8 @@ from qiime2.plugin import (Plugin, Int, Range, Float, Bool, Str, Choices,
 import q2_mystery_stew
 from .type import (SingleInt1, SingleInt2, IntWrapper, TwoIntWrapper,
                    WrappedInt1, WrappedInt2)
-from .format import SingleIntFormat, SingleIntDirectoryFormat
+from .format import (SingleIntFormat, SingleIntDirectoryFormat,
+                     IntSequenceFormat, IntSequenceDirectoryFormat)
 from q2_mystery_stew.template import (rewrite_function_signature,
                                       function_template_1output,
                                       function_template_2output,
@@ -61,7 +62,7 @@ class UsageInstantiator:
             UsageOutputNames(**self.output_names),
         )
 
-        for name, arg in self.params.items():
+        for name, arg in chain(self.inputs.items(), self.params.items()):
             if 'md' in name:
                 arg = arg.to_dataframe()
                 arg = str(arg)
@@ -72,6 +73,8 @@ class UsageInstantiator:
                     arg_str += f': {val}'
 
                 arg = arg_str
+            elif type(arg) == qiime2.sdk.result.Artifact:
+                arg = arg.uuid
 
             param = f'{name}: {arg}\n'
 
@@ -183,39 +186,39 @@ mdc_num_nan = pd.Series([np.nan], index=['a'], name='num')
 mdc_num_nan.index.name = 'id'
 
 all_params = {
-    **int_params,
-    **float_params,
-    **collection_params,
-    # non-numerical parameters
+    # **int_params,
+    # **float_params,
+    # **collection_params,
+    # # non-numerical parameters
     'string': Param('string',
                     Str, ('', 'some string')),
-    'string_choices': Param('string_choices',
-                            Str % Choices('A', 'B'), ('A', 'B')),
-    'boolean': Param('boolean',
-                     Bool, (True, False)),
-    'boolean_true': Param('boolean_true',
-                          Bool % Choices(True), (True,)),
-    'boolean_false': Param('boolean_false',
-                           Bool % Choices(False), (False,)),
-    'boolean_choice': Param('boolean_choice',
-                            Bool % Choices(True, False), (True, False)),
-    # metadata parameters
-    'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
-                                                 index=pd.Index(['0'],
-                                                 name='id'))),
-                                 qiime2.Metadata(pd.DataFrame({'a': '1'},
-                                                 index=pd.Index(['0', '1'],
-                                                 name='id'))),
-                                 qiime2.Metadata(pd.DataFrame({},
-                                                 index=pd.Index(['0'],
-                                                 name='id'))),)),
-    'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
-                     (qiime2.CategoricalMetadataColumn(mdc_cat_val),
-                      qiime2.CategoricalMetadataColumn(mdc_cat_val_nan),)),
-    'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
-                     (qiime2.NumericMetadataColumn(mdc_num_val),
-                      qiime2.NumericMetadataColumn(mdc_num_val_nan),
-                      qiime2.NumericMetadataColumn(mdc_num_nan))),
+    # 'string_choices': Param('string_choices',
+    #                         Str % Choices('A', 'B'), ('A', 'B')),
+    # 'boolean': Param('boolean',
+    #                  Bool, (True, False)),
+    # 'boolean_true': Param('boolean_true',
+    #                       Bool % Choices(True), (True,)),
+    # 'boolean_false': Param('boolean_false',
+    #                        Bool % Choices(False), (False,)),
+    # 'boolean_choice': Param('boolean_choice',
+    #                         Bool % Choices(True, False), (True, False)),
+    # # metadata parameters
+    # 'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
+    #                                              index=pd.Index(['0'],
+    #                                              name='id'))),
+    #                              qiime2.Metadata(pd.DataFrame({'a': '1'},
+    #                                              index=pd.Index(['0', '1'],
+    #                                              name='id'))),
+    #                              qiime2.Metadata(pd.DataFrame({},
+    #                                              index=pd.Index(['0'],
+    #                                              name='id'))),)),
+    # 'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
+    #                  (qiime2.CategoricalMetadataColumn(mdc_cat_val),
+    #                   qiime2.CategoricalMetadataColumn(mdc_cat_val_nan),)),
+    # 'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
+    #                  (qiime2.NumericMetadataColumn(mdc_num_val),
+    #                   qiime2.NumericMetadataColumn(mdc_num_val_nan),
+    #                   qiime2.NumericMetadataColumn(mdc_num_nan))),
 }
 
 # TODO: Next step is to actually implement inputs. Some high level plans are as
@@ -250,26 +253,32 @@ all_params = {
 #
 # Create iterable of inputs as below. When registering a function, select a
 # number of inputs, select that many inputs from the iterable, use em
+# We need to create artifacts as a concrete type, we can accept SingleInt1 | SingleInt2
+# as an input type, but the actual artifact must be one type or the other
 inputs = (
-    Input('SingleInt1', SingleInt1, SingleIntFormat, (-1, 0, 1)),
+    # Input('SingleInt1', SingleInt1, SingleIntFormat, (-1, 0, 1)),
     # Input('SingleInt1USingleInt2', SingleInt1 | SingleInt2, SingleIntFormat,
     #        (1, -1, 0)),
-    # Input('WrappedInt', IntWrapper[WrappedInt1], (0, 1, -1)),
+    Input('WrappedInt', IntWrapper[WrappedInt1], SingleIntFormat, (0, 1, -1)),
     # Input('WrappedUnion', IntWrapper[WrappedInt1 | WrappedInt2], (-1, 0, 1)),
     # Input('TwoWrappedInts',
     #       TwoIntWrapper[WrappedInt1, WrappedInt2], (1, -1, 0)),
-    # Input('SingleIntProperty', SingleInt1 % Properties('A'), (0, 1, -1)),
+    # Input('TwoWrappedIntsUnion', TwoIntWrapper[WrappedInt1 | WrappedInt2, WrappedInt1 | WrappedInt2], (0, 1, -1))
+    # Input('SingleIntProperty', SingleInt1 % Properties('A'), SingleIntFormat, (-1, 0, 1)),
     # Input('SingleIntPropertyExclude', SingleInt1 % Properties(exclude=('A')),
-    #       (-1, 0, 1))
+    #       (1, -1, -0))
 )
+
+
+def factory(format_, value):
+    return qiime2.Artifact.import_data(format_, value)
 
 
 # Selecting a value via the usage of `length(iterable) % some_value` as an
 # index allows for a fairly arbitrary selection of a value without resorting to
 # any form of randomization
-# TODO: I think this can be significantly reworked to remove the need for so
-# many dicts instead making better use of the named tuples
-def register_test_cases(plugin, inputs, all_params):
+# TODO: Make factories for inputs
+def register_test_cases(plugin, input, all_params):
     num_functions = 0
     signatures = generate_signatures()
 
@@ -410,6 +419,7 @@ def register_test_cases(plugin, inputs, all_params):
             )
 
             num_functions += 1
+    # raise ValueError(num_functions)
 
 
 plugin.register_semantic_types(SingleInt1, SingleInt2, IntWrapper,
@@ -417,10 +427,19 @@ plugin.register_semantic_types(SingleInt1, SingleInt2, IntWrapper,
                                EchoOutput)
 
 plugin.register_formats(SingleIntFormat, SingleIntDirectoryFormat,
+                        IntSequenceFormat, IntSequenceDirectoryFormat,
                         EchoOutputFmt, EchoOutputDirFmt)
 
 plugin.register_semantic_type_to_format(SingleInt1, SingleIntDirectoryFormat)
 plugin.register_semantic_type_to_format(SingleInt2, SingleIntDirectoryFormat)
+
+plugin.register_semantic_type_to_format(IntWrapper[WrappedInt1 | WrappedInt2],
+                                        SingleIntDirectoryFormat)
+
+plugin.register_semantic_type_to_format(
+    TwoIntWrapper[WrappedInt1 | WrappedInt2, WrappedInt1 | WrappedInt2],
+    IntSequenceDirectoryFormat)
+
 plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
 
 

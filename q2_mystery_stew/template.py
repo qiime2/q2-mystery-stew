@@ -7,6 +7,8 @@
 # ----------------------------------------------------------------------------
 from inspect import Signature, Parameter
 
+from qiime2.plugin import TextFileFormat
+
 from q2_mystery_stew.templatable_echo_fmt import EchoOutputFmt
 
 
@@ -48,6 +50,8 @@ def write_output(output, **kwargs):
                     arg_str += f': {val}'
 
                 arg = arg_str
+            if isinstance(arg, TextFileFormat):
+                arg = str(arg).split('/')[-3]
 
             fh.write(f'{name}: {arg}\n')
 
