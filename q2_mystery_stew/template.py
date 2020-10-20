@@ -7,13 +7,15 @@
 # ----------------------------------------------------------------------------
 from inspect import Signature, Parameter
 
-from q2_mystery_stew.templatable_echo_fmt import outputFileFmt
+from qiime2.plugin import TextFileFormat
+
+from q2_mystery_stew.templatable_echo_fmt import EchoOutputFmt
 
 
 def rewrite_function_signature(function, inputs, params, num_outputs, name):
     output = []
     for i in range(num_outputs):
-        output.append(outputFileFmt)
+        output.append(EchoOutputFmt)
     output = tuple(output)
 
     input_params = [Parameter(name, Parameter.POSITIONAL_ONLY,
@@ -24,7 +26,8 @@ def rewrite_function_signature(function, inputs, params, num_outputs, name):
                                    annotation=type_)
                         for name, type_ in params.items()])
 
-    annotations = inputs
+    annotations = {}
+    annotations.update(inputs)
     annotations.update(params)
     annotations.update({'return': output})
 
@@ -34,23 +37,36 @@ def rewrite_function_signature(function, inputs, params, num_outputs, name):
     function.__name__ = name
 
 
-def function_template_1output(**kwargs):
-    output = outputFileFmt()
-
+def write_output(output, **kwargs):
     with output.open() as fh:
-        for kw, arg in kwargs.items():
-            fh.write(f'\n{kw}: {arg}')
+        for name, arg in kwargs.items():
+            if 'md' in name:
+                arg = arg.to_dataframe()
+                arg = str(arg)
+                arg = arg.replace('[', ':').replace(']', ':')
+            elif type(arg) == list or type(arg) == set:
+                arg_str = ''
+                for val in arg:
+                    arg_str += f': {val}'
+
+                arg = arg_str
+            if isinstance(arg, TextFileFormat):
+                arg = str(arg).split('/')[-3]
+
+            fh.write(f'{name}: {arg}\n')
+
+    return output
+
+
+def function_template_1output(**kwargs):
+    output = write_output(EchoOutputFmt(), **kwargs)
 
     return output,
 
 
 def function_template_2output(**kwargs):
-    output = outputFileFmt()
-    output2 = outputFileFmt()
-
-    with output.open() as fh:
-        for kw, arg in kwargs.items():
-            fh.write(f'\n{kw}: {arg}')
+    output = write_output(EchoOutputFmt(), **kwargs)
+    output2 = EchoOutputFmt()
 
     with output2.open() as fh:
         fh.write('second')
@@ -59,13 +75,9 @@ def function_template_2output(**kwargs):
 
 
 def function_template_3output(**kwargs):
-    output = outputFileFmt()
-    output2 = outputFileFmt()
-    output3 = outputFileFmt()
-
-    with output.open() as fh:
-        for kw, arg in kwargs.items():
-            fh.write(f'\n{kw}: {arg}')
+    output = write_output(EchoOutputFmt(), **kwargs)
+    output2 = EchoOutputFmt()
+    output3 = EchoOutputFmt()
 
     with output2.open() as fh:
         fh.write('second')
