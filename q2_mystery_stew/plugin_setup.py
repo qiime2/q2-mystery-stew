@@ -27,15 +27,16 @@ from q2_mystery_stew.template import (rewrite_function_signature,
 from q2_mystery_stew.templatable_echo_fmt import (EchoOutput, EchoOutputFmt,
                                                   EchoOutputDirFmt)
 
-plugin = Plugin(
-    name='mystery-stew',
-    version=q2_mystery_stew.__version__,
-    website='https://github.com/qiime2/q2-mystery-stew',
-    package='q2_mystery_stew',
-    description=('This QIIME 2 plugin templates out arbitrary QIIME 2 actions '
-                 'to test interfaces. '),
-    short_description='Plugin for generating arbitrary QIIME 2 actions.'
-)
+def create_plugin():
+    return Plugin(
+               name='mystery-stew',
+               version=q2_mystery_stew.__version__,
+               website='https://github.com/qiime2/q2-mystery-stew',
+               package='q2_mystery_stew',
+               description=('This QIIME 2 plugin templates out arbitrary QIIME 2 actions '
+                           'to test interfaces. '),
+               short_description='Plugin for generating arbitrary QIIME 2 actions.'
+           )
 
 Sig = namedtuple('Sig', ['num_params', 'num_outputs', 'template'])
 Param = namedtuple('Param', ['base_name', 'type', 'domain'])
