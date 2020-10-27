@@ -288,8 +288,6 @@ def register_test_cases(plugin, input, selected_params):
 
             param_dict = {}
             for i, param in enumerate(params):
-                # param = selected_params[param.base_name]
-                print(param,end='\n\n')
                 param_dict.update({param.base_name + f'_{i}': param})
 
             chosen_param_values = {}
