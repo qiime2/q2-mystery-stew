@@ -21,9 +21,5 @@ setup(
     scripts=[],
     package_data={
     },
-    entry_points={
-        "qiime2.plugins":
-            ["q2-mystery-stew=q2_mystery_stew.plugin_setup:plugin"]
-    },
     zip_safe=False,
 )

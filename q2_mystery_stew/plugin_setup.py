@@ -27,15 +27,50 @@ from q2_mystery_stew.template import (rewrite_function_signature,
 from q2_mystery_stew.templatable_echo_fmt import (EchoOutput, EchoOutputFmt,
                                                   EchoOutputDirFmt)
 
-plugin = Plugin(
-    name='mystery-stew',
-    version=q2_mystery_stew.__version__,
-    website='https://github.com/qiime2/q2-mystery-stew',
-    package='q2_mystery_stew',
-    description=('This QIIME 2 plugin templates out arbitrary QIIME 2 actions '
-                 'to test interfaces. '),
-    short_description='Plugin for generating arbitrary QIIME 2 actions.'
-)
+
+def create_plugin():
+    plugin = Plugin(
+               name='mystery-stew',
+               project_name='q2-mystery-stew',
+               version=q2_mystery_stew.__version__,
+               website='https://github.com/qiime2/q2-mystery-stew',
+               package='q2_mystery_stew',
+               description=('This QIIME 2 plugin templates out arbitrary '
+                            'QIIME 2 actions to test interfaces. '),
+               short_description='Plugin for generating arbitrary QIIME 2 '
+                                 'actions.'
+             )
+
+    plugin.register_semantic_types(SingleInt1, SingleInt2, IntWrapper,
+                                   WrappedInt1, WrappedInt2, EchoOutput)
+
+    plugin.register_formats(SingleIntFormat, SingleIntDirectoryFormat,
+                            EchoOutputFmt, EchoOutputDirFmt)
+
+    plugin.register_semantic_type_to_format(SingleInt1,
+                                            SingleIntDirectoryFormat)
+    plugin.register_semantic_type_to_format(SingleInt2,
+                                            SingleIntDirectoryFormat)
+
+    plugin.register_semantic_type_to_format(
+        IntWrapper[WrappedInt1 | WrappedInt2], SingleIntDirectoryFormat)
+
+    plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
+
+    # This transformer is being registered in this file right now because it is
+    # needed by `register_test_cases` so it needs to be registered before it is
+    # called
+    @plugin.register_transformer
+    def _0(data: int) -> SingleIntFormat:
+        ff = SingleIntFormat()
+        with ff.open() as fh:
+            fh.write('%d\n' % data)
+        return ff
+
+    register_test_cases(plugin, inputs, all_params)
+
+    return plugin
+
 
 Sig = namedtuple('Sig', ['num_params', 'num_outputs', 'template'])
 Param = namedtuple('Param', ['base_name', 'type', 'domain'])
@@ -389,32 +424,3 @@ def register_test_cases(plugin, input, all_params):
             )
 
             num_functions += 1
-
-
-plugin.register_semantic_types(SingleInt1, SingleInt2, IntWrapper,
-                               WrappedInt1, WrappedInt2, EchoOutput)
-
-plugin.register_formats(SingleIntFormat, SingleIntDirectoryFormat,
-                        EchoOutputFmt, EchoOutputDirFmt)
-
-plugin.register_semantic_type_to_format(SingleInt1, SingleIntDirectoryFormat)
-plugin.register_semantic_type_to_format(SingleInt2, SingleIntDirectoryFormat)
-
-plugin.register_semantic_type_to_format(IntWrapper[WrappedInt1 | WrappedInt2],
-                                        SingleIntDirectoryFormat)
-
-plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
-
-
-# This transformer is being registered in this file right now because it is
-# needed by `register_test_cases` so it needs to be registered before it is
-# called
-@plugin.register_transformer
-def _0(data: int) -> SingleIntFormat:
-    ff = SingleIntFormat()
-    with ff.open() as fh:
-        fh.write('%d\n' % data)
-    return ff
-
-
-register_test_cases(plugin, inputs, all_params)
