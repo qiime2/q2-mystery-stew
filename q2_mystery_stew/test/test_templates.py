@@ -5,13 +5,31 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+
+import unittest
+
 from qiime2.plugin.testing import TestPluginBase
+from qiime2.sdk import PluginManager, usage
 
 from q2_mystery_stew.plugin_setup import create_plugin
 
-class TestTemplates(TestPluginBase):
+class TestTemplates(unittest.TestCase):
     package = 'q2_mystery_stew.test'
     plugin = create_plugin()
 
+    def setUp(self):
+        pm = PluginManager(add_plugins=False)
+        pm.add_plugin(self.plugin)
+
     def test_examples(self):
         self.execute_examples()
+
+    def execute_examples(self):
+        if self.plugin is None:
+            raise ValueError('Attempted to run `execute_examples` without '
+                             'configuring test harness.')
+        for _, action in self.plugin.actions.items():
+            for name, example_f in action.examples.items():
+                with self.subTest(example=name):
+                    use = usage.ExecutionUsage()
+                    example_f(use)

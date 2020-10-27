@@ -31,6 +31,7 @@ from q2_mystery_stew.templatable_echo_fmt import (EchoOutput, EchoOutputFmt,
 def create_plugin():
     plugin = Plugin(
                name='mystery-stew',
+               project_name='q2-mystery-stew',
                version=q2_mystery_stew.__version__,
                website='https://github.com/qiime2/q2-mystery-stew',
                package='q2_mystery_stew',
