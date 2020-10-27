@@ -250,6 +250,41 @@ inputs = (
           SingleIntFormat, (-1, 0, 1)),
 )
 
+# all_params = {
+#     **int_params,
+#     **float_params,
+#     **collection_params,
+#     # non-numerical parameters
+#     'string': Param('string',
+#                     Str, ('', 'some string')),
+#     'string_choices': Param('string_choices',
+#                             Str % Choices('A', 'B'), ('A', 'B')),
+#     'boolean': Param('boolean',
+#                      Bool, (True, False)),
+#     'boolean_true': Param('boolean_true',
+#                           Bool % Choices(True), (True,)),
+#     'boolean_false': Param('boolean_false',
+#                            Bool % Choices(False), (False,)),
+#     'boolean_choice': Param('boolean_choice',
+#                             Bool % Choices(True, False), (True, False)),
+#     # metadata parameters
+#     'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
+#                                                  index=pd.Index(['0'],
+#                                                  name='id'))),
+#                                  qiime2.Metadata(pd.DataFrame({'a': '1'},
+#                                                  index=pd.Index(['0', '1'],
+#                                                  name='id'))),
+#                                  qiime2.Metadata(pd.DataFrame({},
+#                                                  index=pd.Index(['0'],
+#                                                  name='id'))),)),
+#     'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
+#                      (qiime2.CategoricalMetadataColumn(mdc_cat_val),
+#                       qiime2.CategoricalMetadataColumn(mdc_cat_val_nan),)),
+#     'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
+#                      (qiime2.NumericMetadataColumn(mdc_num_val),
+#                       qiime2.NumericMetadataColumn(mdc_num_val_nan),
+#                       qiime2.NumericMetadataColumn(mdc_num_nan))),
+# }
 
 def factory(format_, value):
     return qiime2.Artifact.import_data(format_, value)
