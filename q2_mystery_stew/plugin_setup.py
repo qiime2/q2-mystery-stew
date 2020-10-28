@@ -346,7 +346,7 @@ def register_test_cases(plugin, input, all_params):
             # yet know what types of Ints or Floats they are going to be
             # composed of
             completed_collection_params = {}
-            for index, (name, value) in enumerate(param_dict.items()):
+            for (name, value) in param_dict.items():
                 if value.type == List[Int] or value.type == List[Float]:
                     selected_value = value.domain[num_functions %
                                                   len(value.domain)]
@@ -356,7 +356,7 @@ def register_test_cases(plugin, input, all_params):
                                       selected_value.domain)
 
                     param_val = []
-                    for val in range(sig.num_outputs):
+                    for _ in range(sig.num_outputs):
                         selected_size = len(selected_value.domain)
                         param_val.append(
                             selected_value.domain[selected_size %
