@@ -199,39 +199,29 @@ int_params = {
 }
 int_values = tuple(int_params.values())
 
-float_params = {
-    # float parameters
-    'single_float': Param('single_float',
-                          Float, (-1.5, 0.0, 1.5)),
-    'float_range_1_param': Param('float_range_1_param',
-                                 Float % Range(2.5), (-42.5, 0.0, 2.49)),
-    'float_range_1_param_i_e': Param('float_range_1_param_i_e',
-                                     Float % Range(2.5, inclusive_end=True),
-                                     (-42.5, 0.0, 2.5)),
-    'float_range_2_params': Param('float_range_2_params',
-                                  Float % Range(-3.5, 3.5), (-3.5, 0.0, 3.49)),
-    'float_range_2_params_i_e': Param('float_range_2_params_i_e',
-                                      Float % Range(-3.5, 3.5,
-                                                    inclusive_end=True),
-                                      (-3.5, 0.0, 3.5)),
-    'float_range_2_params_no_i': Param('float_range_2_params_no_i',
-                                       Float % Range(-3.5, 3.5,
-                                                     inclusive_start=False),
-                                       (-3.49, 0.0, 3.49)),
-    'float_range_2_params_i_e_ex_s': Param('float_range_2_params_i_e_ex_s',
-                                           Float % Range(-3.5, 3.5,
-                                                         inclusive_start=False,
-                                                         inclusive_end=True),
-                                           (-3.49, 0.0, 3.49))
-}
-float_values = tuple(float_params.values())
+def float_params():
+    yield Param('single_float', Float, (-1.5, 0.0, 1.5))
+    yield Param('float_range_1_param', Float % Range(2.5), (-42.5, 0.0, 2.49))
+    yield Param('float_range_1_param_i_e',
+                Float % Range(2.5, inclusive_end=True), (-42.5, 0.0, 2.5))
+    yield Param('float_range_2_params', Float % Range(-3.5, 3.5),
+                (-3.5, 0.0, 3.49))
+    yield Param('float_range_2_params_i_e',
+                Float % Range(-3.5, 3.5, inclusive_end=True), (-3.5, 0.0, 3.5))
+    yield Param('float_range_2_params_no_i',
+                Float % Range(-3.5, 3.5, inclusive_start=False),
+                (-3.49, 0.0, 3.49))
+    yield Param('float_range_2_params_i_e_ex_s',
+                Float % Range(-3.5, 3.5, inclusive_start=False,
+                              inclusive_end=True),
+                (-3.49, 0.0, 3.49))
 
 collection_params = {
     # collection parameters
     'int_list': Param('int_list', List[Int], (int_values)),
-    'float_list': Param('float_list', List[Float], (float_values)),
+    'float_list': Param('float_list', List[Float], (float_params)),
     'int_set': Param('int_set', Set[Int], (int_values)),
-    'float_set': Param('float_set', Set[Float], (float_values))
+    'float_set': Param('float_set', Set[Float], (float_params))
 }
 
 mdc_cat_val = pd.Series(['a'], index=['a'], name='cat')
@@ -249,41 +239,41 @@ mdc_num_val_nan.index.name = 'id'
 mdc_num_nan = pd.Series([np.nan], index=['a'], name='num')
 mdc_num_nan.index.name = 'id'
 
-all_params = {
-    **int_params,
-    **float_params,
-    **collection_params,
-    # non-numerical parameters
-    'string': Param('string',
-                    Str, ('', 'some string')),
-    'string_choices': Param('string_choices',
-                            Str % Choices('A', 'B'), ('A', 'B')),
-    'boolean': Param('boolean',
-                     Bool, (True, False)),
-    'boolean_true': Param('boolean_true',
-                          Bool % Choices(True), (True,)),
-    'boolean_false': Param('boolean_false',
-                           Bool % Choices(False), (False,)),
-    'boolean_choice': Param('boolean_choice',
-                            Bool % Choices(True, False), (True, False)),
-    # metadata parameters
-    'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
-                                                 index=pd.Index(['0'],
-                                                 name='id'))),
-                                 qiime2.Metadata(pd.DataFrame({'a': '1'},
-                                                 index=pd.Index(['0', '1'],
-                                                 name='id'))),
-                                 qiime2.Metadata(pd.DataFrame({},
-                                                 index=pd.Index(['0'],
-                                                 name='id'))),)),
-    'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
-                     (qiime2.CategoricalMetadataColumn(mdc_cat_val),
-                      qiime2.CategoricalMetadataColumn(mdc_cat_val_nan),)),
-    'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
-                     (qiime2.NumericMetadataColumn(mdc_num_val),
-                      qiime2.NumericMetadataColumn(mdc_num_val_nan),
-                      qiime2.NumericMetadataColumn(mdc_num_nan))),
-}
+# all_params = {
+#     **int_params,
+#     **float_params,
+#     **collection_params,
+#     # non-numerical parameters
+#     'string': Param('string',
+#                     Str, ('', 'some string')),
+#     'string_choices': Param('string_choices',
+#                             Str % Choices('A', 'B'), ('A', 'B')),
+#     'boolean': Param('boolean',
+#                      Bool, (True, False)),
+#     'boolean_true': Param('boolean_true',
+#                           Bool % Choices(True), (True,)),
+#     'boolean_false': Param('boolean_false',
+#                            Bool % Choices(False), (False,)),
+#     'boolean_choice': Param('boolean_choice',
+#                             Bool % Choices(True, False), (True, False)),
+#     # metadata parameters
+#     'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
+#                                                  index=pd.Index(['0'],
+#                                                  name='id'))),
+#                                  qiime2.Metadata(pd.DataFrame({'a': '1'},
+#                                                  index=pd.Index(['0', '1'],
+#                                                  name='id'))),
+#                                  qiime2.Metadata(pd.DataFrame({},
+#                                                  index=pd.Index(['0'],
+#                                                  name='id'))),)),
+#     'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
+#                      (qiime2.CategoricalMetadataColumn(mdc_cat_val),
+#                       qiime2.CategoricalMetadataColumn(mdc_cat_val_nan),)),
+#     'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
+#                      (qiime2.NumericMetadataColumn(mdc_num_val),
+#                       qiime2.NumericMetadataColumn(mdc_num_val_nan),
+#                       qiime2.NumericMetadataColumn(mdc_num_nan))),
+# }
 
 inputs = (
     Input('SingleInt1', SingleInt1, SingleIntFormat, (-1, 0, 1)),
