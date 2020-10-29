@@ -67,7 +67,7 @@ def create_plugin():
             fh.write('%d\n' % data)
         return ff
 
-    register_test_cases(plugin, inputs, all_params)
+    register_test_cases(plugin, inputs, int_params)
 
     return plugin
 
@@ -173,31 +173,19 @@ def generate_signatures():
                       function_templates[num_outputs - 1])
 
 
-int_params = {
-    # int parameters
-    'single_int': Param('single_int',
-                        Int, (-1, 0, 1)),
-    'int_range_1_param': Param('int_range_1_param',
-                               Int % Range(3), (-42, 0, 2)),
-    'int_range_1_param_i_e': Param('int_range_1_param_i_e',
-                                   Int % Range(3, inclusive_end=True),
-                                   (-43, 0, 3)),
-    'int_range_2_params': Param('int_range_2_params',
-                                Int % Range(-3, 4), (-3, 0, 3)),
-    'int_range_2_params_i_e': Param('int_range_2_params_i_e',
-                                    Int % Range(-3, 4, inclusive_end=True),
-                                               (-3, 0, 4)),
-    'int_range_2_params_no_i': Param('int_range_2_params_no_i',
-                                     Int % Range(-3, 4,
-                                                 inclusive_start=False),
-                                     (-2, 0, 3)),
-    'int_range_2_params_i_e_ex_s': Param('int_range_2_params_i_e_ex_s',
-                                         Int % Range(-3, 4,
-                                                     inclusive_start=False,
-                                                     inclusive_end=True),
-                                         (-2, 0, 4))
-}
-int_values = tuple(int_params.values())
+def int_params():
+    yield Param('single_int', Int, (-1, 0, 1))
+    yield Param('int_range_1_param', Int % Range(3), (-42, 0, 2))
+    yield Param('int_range_1_param_i_e', Int % Range(3, inclusive_end=True),
+                (-43, 0, 3))
+    yield Param('int_range_2_params', Int % Range(-3, 4), (-3, 0, 3))
+    yield Param('int_range_2_params_i_e',
+                 Int % Range(-3, 4, inclusive_end=True), (-3, 0, 4))
+    yield Param('int_range_2_params_no_i',
+                Int % Range(-3, 4, inclusive_start=False), (-2, 0, 3))
+    yield Param('int_range_2_params_i_e_ex_s',
+                Int % Range(-3, 4, inclusive_start=False, inclusive_end=True),
+                (-2, 0, 4))
 
 def float_params():
     yield Param('single_float', Float, (-1.5, 0.0, 1.5))
@@ -218,9 +206,9 @@ def float_params():
 
 collection_params = {
     # collection parameters
-    'int_list': Param('int_list', List[Int], (int_values)),
+    'int_list': Param('int_list', List[Int], (int_param)),
     'float_list': Param('float_list', List[Float], (float_params)),
-    'int_set': Param('int_set', Set[Int], (int_values)),
+    'int_set': Param('int_set', Set[Int], (int_param)),
     'float_set': Param('float_set', Set[Float], (float_params))
 }
 
@@ -238,6 +226,19 @@ mdc_num_val_nan.index.name = 'id'
 
 mdc_num_nan = pd.Series([np.nan], index=['a'], name='num')
 mdc_num_nan.index.name = 'id'
+
+inputs = (
+    Input('SingleInt1', SingleInt1, SingleIntFormat, (-1, 0, 1)),
+    Input('SingleIntProperty', SingleInt1 % Properties('A'),
+          SingleIntFormat, (-1, 0, 1)),
+    Input('SingleIntPropertyExclude', SingleInt1 % Properties(exclude=('A')),
+          SingleIntFormat, (1, -1, -0)),
+    Input('SingleInt1USingleInt2', SingleInt1 | SingleInt2, SingleIntFormat,
+          (1, -1, 0)),
+    Input('WrappedInt', IntWrapper[WrappedInt1], SingleIntFormat, (0, 1, -1)),
+    Input('WrappedUnion', IntWrapper[WrappedInt1 | WrappedInt2],
+          SingleIntFormat, (-1, 0, 1)),
+)
 
 # all_params = {
 #     **int_params,
@@ -275,20 +276,6 @@ mdc_num_nan.index.name = 'id'
 #                       qiime2.NumericMetadataColumn(mdc_num_nan))),
 # }
 
-inputs = (
-    Input('SingleInt1', SingleInt1, SingleIntFormat, (-1, 0, 1)),
-    Input('SingleIntProperty', SingleInt1 % Properties('A'),
-          SingleIntFormat, (-1, 0, 1)),
-    Input('SingleIntPropertyExclude', SingleInt1 % Properties(exclude=('A')),
-          SingleIntFormat, (1, -1, -0)),
-    Input('SingleInt1USingleInt2', SingleInt1 | SingleInt2, SingleIntFormat,
-          (1, -1, 0)),
-    Input('WrappedInt', IntWrapper[WrappedInt1], SingleIntFormat, (0, 1, -1)),
-    Input('WrappedUnion', IntWrapper[WrappedInt1 | WrappedInt2],
-          SingleIntFormat, (-1, 0, 1)),
-)
-
-
 def factory(format_, value):
     return qiime2.Artifact.import_data(format_, value)
 
@@ -296,12 +283,12 @@ def factory(format_, value):
 # Selecting a value via the usage of `length(iterable) % some_value` as an
 # index allows for a fairly arbitrary selection of a value without resorting to
 # any form of randomization
-def register_test_cases(plugin, input, all_params):
+def register_test_cases(plugin, input, selected_params):
     num_functions = 0
     signatures = generate_signatures()
 
     for sig in signatures:
-        for params in product(all_params.values(), repeat=sig.num_params):
+        for params in product(selected_params(), repeat=sig.num_params):
             action_name = f'func_{num_functions}'
 
             input_name_to_type_dict = {}
@@ -326,7 +313,6 @@ def register_test_cases(plugin, input, all_params):
 
             param_dict = {}
             for i, param in enumerate(params):
-                param = all_params[param.base_name]
                 param_dict.update({param.base_name + f'_{i}': param})
 
             chosen_param_values = {}
@@ -336,7 +322,7 @@ def register_test_cases(plugin, input, all_params):
             # yet know what types of Ints or Floats they are going to be
             # composed of
             completed_collection_params = {}
-            for index, (name, value) in enumerate(param_dict.items()):
+            for (name, value) in param_dict.items():
                 if value.type == List[Int] or value.type == List[Float]:
                     selected_value = value.domain[num_functions %
                                                   len(value.domain)]
@@ -346,7 +332,7 @@ def register_test_cases(plugin, input, all_params):
                                       selected_value.domain)
 
                     param_val = []
-                    for val in range(sig.num_outputs):
+                    for _ in range(sig.num_outputs):
                         selected_size = len(selected_value.domain)
                         param_val.append(
                             selected_value.domain[selected_size %
