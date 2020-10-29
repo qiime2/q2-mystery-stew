@@ -8,10 +8,10 @@
 
 import unittest
 
-from qiime2.plugin.testing import TestPluginBase
 from qiime2.sdk import PluginManager, usage
 
 from q2_mystery_stew.plugin_setup import create_plugin
+
 
 class TestTemplates(unittest.TestCase):
     package = 'q2_mystery_stew.test'

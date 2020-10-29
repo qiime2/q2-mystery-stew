@@ -180,46 +180,38 @@ def int_params():
                 (-43, 0, 3))
     yield Param('int_range_2_params', Int % Range(-3, 4), (-3, 0, 3))
     yield Param('int_range_2_params_i_e',
-                 Int % Range(-3, 4, inclusive_end=True), (-3, 0, 4))
+                Int % Range(-3, 4, inclusive_end=True), (-3, 0, 4))
     yield Param('int_range_2_params_no_i',
                 Int % Range(-3, 4, inclusive_start=False), (-2, 0, 3))
     yield Param('int_range_2_params_i_e_ex_s',
                 Int % Range(-3, 4, inclusive_start=False, inclusive_end=True),
                 (-2, 0, 4))
 
-float_params = {
-    # float parameters
-    'single_float': Param('single_float',
-                          Float, (-1.5, 0.0, 1.5)),
-    'float_range_1_param': Param('float_range_1_param',
-                                 Float % Range(2.5), (-42.5, 0.0, 2.49)),
-    'float_range_1_param_i_e': Param('float_range_1_param_i_e',
-                                     Float % Range(2.5, inclusive_end=True),
-                                     (-42.5, 0.0, 2.5)),
-    'float_range_2_params': Param('float_range_2_params',
-                                  Float % Range(-3.5, 3.5), (-3.5, 0.0, 3.49)),
-    'float_range_2_params_i_e': Param('float_range_2_params_i_e',
-                                      Float % Range(-3.5, 3.5,
-                                                    inclusive_end=True),
-                                      (-3.5, 0.0, 3.5)),
-    'float_range_2_params_no_i': Param('float_range_2_params_no_i',
-                                       Float % Range(-3.5, 3.5,
-                                                     inclusive_start=False),
-                                       (-3.49, 0.0, 3.49)),
-    'float_range_2_params_i_e_ex_s': Param('float_range_2_params_i_e_ex_s',
-                                           Float % Range(-3.5, 3.5,
-                                                         inclusive_start=False,
-                                                         inclusive_end=True),
-                                           (-3.49, 0.0, 3.49))
-}
-float_values = tuple(float_params.values())
+
+def float_params():
+    yield Param('single_float', Float, (-1.5, 0.0, 1.5))
+    yield Param('float_range_1_param', Float % Range(2.5), (-42.5, 0.0, 2.49))
+    yield Param('float_range_1_param_i_e',
+                Float % Range(2.5, inclusive_end=True), (-42.5, 0.0, 2.5))
+    yield Param('float_range_2_params', Float % Range(-3.5, 3.5),
+                (-3.5, 0.0, 3.49))
+    yield Param('float_range_2_params_i_e',
+                Float % Range(-3.5, 3.5, inclusive_end=True), (-3.5, 0.0, 3.5))
+    yield Param('float_range_2_params_no_i',
+                Float % Range(-3.5, 3.5, inclusive_start=False),
+                (-3.49, 0.0, 3.49))
+    yield Param('float_range_2_params_i_e_ex_s',
+                Float % Range(-3.5, 3.5, inclusive_start=False,
+                              inclusive_end=True),
+                (-3.49, 0.0, 3.49))
+
 
 collection_params = {
     # collection parameters
     'int_list': Param('int_list', List[Int], (int_params)),
-    'float_list': Param('float_list', List[Float], (float_values)),
+    'float_list': Param('float_list', List[Float], (float_params)),
     'int_set': Param('int_set', Set[Int], (int_params)),
-    'float_set': Param('float_set', Set[Float], (float_values))
+    'float_set': Param('float_set', Set[Float], (float_params))
 }
 
 mdc_cat_val = pd.Series(['a'], index=['a'], name='cat')
@@ -285,6 +277,7 @@ inputs = (
 #                       qiime2.NumericMetadataColumn(mdc_num_val_nan),
 #                       qiime2.NumericMetadataColumn(mdc_num_nan))),
 # }
+
 
 def factory(format_, value):
     return qiime2.Artifact.import_data(format_, value)
