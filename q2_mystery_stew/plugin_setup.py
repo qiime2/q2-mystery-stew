@@ -67,7 +67,7 @@ def create_plugin():
             fh.write('%d\n' % data)
         return ff
 
-    register_test_cases(plugin, inputs, int_params)
+    register_test_cases(plugin, inputs, md_params)
 
     return plugin
 
@@ -188,6 +188,22 @@ def int_params():
                 (-2, 0, 4))
 
 
+int_values = (
+    Param('single_int', Int, (-1, 0, 1)),
+    Param('int_range_1_param', Int % Range(3), (-42, 0, 2)),
+    Param('int_range_1_param_i_e', Int % Range(3, inclusive_end=True),
+          (-43, 0, 3)),
+    Param('int_range_2_params', Int % Range(-3, 4), (-3, 0, 3)),
+    Param('int_range_2_params_i_e',
+          Int % Range(-3, 4, inclusive_end=True), (-3, 0, 4)),
+    Param('int_range_2_params_no_i',
+          Int % Range(-3, 4, inclusive_start=False), (-2, 0, 3)),
+    Param('int_range_2_params_i_e_ex_s',
+          Int % Range(-3, 4, inclusive_start=False, inclusive_end=True),
+                      (-2, 0, 4)),
+)
+
+
 def float_params():
     yield Param('single_float', Float, (-1.5, 0.0, 1.5))
     yield Param('float_range_1_param', Float % Range(2.5), (-42.5, 0.0, 2.49))
@@ -206,19 +222,63 @@ def float_params():
                 (-3.49, 0.0, 3.49))
 
 
-collection_params = {
+float_values = (
+    Param('single_float', Float, (-1.5, 0.0, 1.5)),
+    Param('float_range_1_param', Float % Range(2.5), (-42.5, 0.0, 2.49)),
+    Param('float_range_1_param_i_e',
+          Float % Range(2.5, inclusive_end=True), (-42.5, 0.0, 2.5)),
+    Param('float_range_2_params', Float % Range(-3.5, 3.5),
+          (-3.5, 0.0, 3.49)),
+    Param('float_range_2_params_i_e',
+          Float % Range(-3.5, 3.5, inclusive_end=True), (-3.5, 0.0, 3.5)),
+    Param('float_range_2_params_no_i',
+          Float % Range(-3.5, 3.5, inclusive_start=False),
+          (-3.49, 0.0, 3.49)),
+    Param('float_range_2_params_i_e_ex_s',
+          Float % Range(-3.5, 3.5, inclusive_start=False,
+                        inclusive_end=True),
+          (-3.49, 0.0, 3.49)),
+)
+
+
+def collection_params():
     # collection parameters
-    'int_list': Param('int_list', List[Int], (int_params)),
-    'float_list': Param('float_list', List[Float], (float_params)),
-    'int_set': Param('int_set', Set[Int], (int_params)),
-    'float_set': Param('float_set', Set[Float], (float_params))
-}
+    yield Param('int_list', List[Int], (int_values))
+    yield Param('float_list', List[Float], (float_values))
+    yield Param('int_set', Set[Int], (int_values))
+    yield Param('float_set', Set[Float], (float_values))
+
+
+def string_params():
+    yield Param('string',
+                Str, ('', 'some string'))
+    yield Param('string_choices',
+                Str % Choices('A', 'B'), ('A', 'B'))
+
+
+def bool_params():
+    yield Param('boolean',
+                Bool, (True, False))
+    yield Param('boolean_true',
+                Bool % Choices(True), (True,))
+    yield Param('boolean_false',
+                Bool % Choices(False), (False,))
+    yield Param('boolean_choice',
+                Bool % Choices(True, False), (True, False))
+
 
 mdc_cat_val = pd.Series(['a'], index=['a'], name='cat')
 mdc_cat_val.index.name = 'id'
 
 mdc_cat_val_nan = pd.Series(['a', np.nan], index=['a', 'b'], name='cat')
 mdc_cat_val_nan.index.name = 'id'
+
+
+def cat_col_params():
+    yield Param('mdc_cat', MetadataColumn[Categorical],
+                (qiime2.CategoricalMetadataColumn(mdc_cat_val),
+                 qiime2.CategoricalMetadataColumn(mdc_cat_val_nan)))
+
 
 mdc_num_val = pd.Series([1], index=['a'], name='num')
 mdc_num_val.index.name = 'id'
@@ -228,6 +288,26 @@ mdc_num_val_nan.index.name = 'id'
 
 mdc_num_nan = pd.Series([np.nan], index=['a'], name='num')
 mdc_num_nan.index.name = 'id'
+
+
+def num_col_params():
+    yield Param('mdc_num', MetadataColumn[Numeric],
+                (qiime2.NumericMetadataColumn(mdc_num_val),
+                 qiime2.NumericMetadataColumn(mdc_num_val_nan),
+                 qiime2.NumericMetadataColumn(mdc_num_nan)))
+
+
+def md_params():
+    yield Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
+                                                 index=pd.Index(['0'],
+                                                 name='id'))),
+                                 qiime2.Metadata(pd.DataFrame({'a': '1'},
+                                                 index=pd.Index(['0', '1'],
+                                                 name='id'))),
+                                 qiime2.Metadata(pd.DataFrame({},
+                                                 index=pd.Index(['0'],
+                                                 name='id'))),))
+
 
 inputs = (
     Input('SingleInt1', SingleInt1, SingleIntFormat, (-1, 0, 1)),
@@ -241,42 +321,6 @@ inputs = (
     Input('WrappedUnion', IntWrapper[WrappedInt1 | WrappedInt2],
           SingleIntFormat, (-1, 0, 1)),
 )
-
-# all_params = {
-#     **int_params,
-#     **float_params,
-#     **collection_params,
-#     # non-numerical parameters
-#     'string': Param('string',
-#                     Str, ('', 'some string')),
-#     'string_choices': Param('string_choices',
-#                             Str % Choices('A', 'B'), ('A', 'B')),
-#     'boolean': Param('boolean',
-#                      Bool, (True, False)),
-#     'boolean_true': Param('boolean_true',
-#                           Bool % Choices(True), (True,)),
-#     'boolean_false': Param('boolean_false',
-#                            Bool % Choices(False), (False,)),
-#     'boolean_choice': Param('boolean_choice',
-#                             Bool % Choices(True, False), (True, False)),
-#     # metadata parameters
-#     'md': Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
-#                                                  index=pd.Index(['0'],
-#                                                  name='id'))),
-#                                  qiime2.Metadata(pd.DataFrame({'a': '1'},
-#                                                  index=pd.Index(['0', '1'],
-#                                                  name='id'))),
-#                                  qiime2.Metadata(pd.DataFrame({},
-#                                                  index=pd.Index(['0'],
-#                                                  name='id'))),)),
-#     'mdc_cat': Param('mdc_cat', MetadataColumn[Categorical],
-#                      (qiime2.CategoricalMetadataColumn(mdc_cat_val),
-#                       qiime2.CategoricalMetadataColumn(mdc_cat_val_nan),)),
-#     'mdc_num': Param('mdc_num', MetadataColumn[Numeric],
-#                      (qiime2.NumericMetadataColumn(mdc_num_val),
-#                       qiime2.NumericMetadataColumn(mdc_num_val_nan),
-#                       qiime2.NumericMetadataColumn(mdc_num_nan))),
-# }
 
 
 def factory(format_, value):
@@ -316,6 +360,7 @@ def register_test_cases(plugin, input, selected_params):
 
             param_dict = {}
             for i, param in enumerate(params):
+                print(param)
                 param_dict.update({param.base_name + f'_{i}': param})
 
             chosen_param_values = {}
