@@ -28,7 +28,8 @@ from q2_mystery_stew.templatable_echo_fmt import (EchoOutput, EchoOutputFmt,
                                                   EchoOutputDirFmt)
 
 
-def create_plugin():
+def create_plugin(ints=False, floats=False, collections=False, strings=False,
+                  bools=False, cat_cols=False, num_cols=False, mds=False):
     plugin = Plugin(
                name='mystery-stew',
                project_name='q2-mystery-stew',
@@ -67,7 +68,42 @@ def create_plugin():
             fh.write('%d\n' % data)
         return ff
 
-    register_test_cases(plugin, inputs, md_params)
+    selected_types = []
+
+    if ints:
+        selected_types.append(int_params)
+
+    if floats:
+        selected_types.append(float_params)
+
+    if collections:
+        selected_types.append(collection_params)
+
+    if strings:
+        selected_types.append(string_params)
+
+    if bools:
+        selected_types.append(bool_params)
+
+    if cat_cols:
+        selected_types.append(cat_col_params)
+
+    if num_cols:
+        selected_types.append(num_col_params)
+
+    if mds:
+        selected_types.append(md_params)
+
+    if not selected_types:
+        raise ValueError("Must select at least one parameter type to use")
+
+    # itertools.chain didn't produce the results I wanted, so I made this. I
+    # want the result of the chaining to still be a generator
+    def chain_generators():
+        for type in selected_types:
+            yield from type()
+
+    register_test_cases(plugin, inputs, chain_generators)
 
     return plugin
 
