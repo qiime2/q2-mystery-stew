@@ -224,22 +224,6 @@ def int_params():
                 (-2, 0, 4))
 
 
-int_values = (
-    Param('single_int', Int, (-1, 0, 1)),
-    Param('int_range_1_param', Int % Range(3), (-42, 0, 2)),
-    Param('int_range_1_param_i_e', Int % Range(3, inclusive_end=True),
-          (-43, 0, 3)),
-    Param('int_range_2_params', Int % Range(-3, 4), (-3, 0, 3)),
-    Param('int_range_2_params_i_e',
-          Int % Range(-3, 4, inclusive_end=True), (-3, 0, 4)),
-    Param('int_range_2_params_no_i',
-          Int % Range(-3, 4, inclusive_start=False), (-2, 0, 3)),
-    Param('int_range_2_params_i_e_ex_s',
-          Int % Range(-3, 4, inclusive_start=False, inclusive_end=True),
-                     (-2, 0, 4)),
-)
-
-
 def float_params():
     yield Param('single_float', Float, (-1.5, 0.0, 1.5))
     yield Param('float_range_1_param', Float % Range(2.5), (-42.5, 0.0, 2.49))
@@ -258,31 +242,12 @@ def float_params():
                 (-3.49, 0.0, 3.49))
 
 
-float_values = (
-    Param('single_float', Float, (-1.5, 0.0, 1.5)),
-    Param('float_range_1_param', Float % Range(2.5), (-42.5, 0.0, 2.49)),
-    Param('float_range_1_param_i_e',
-          Float % Range(2.5, inclusive_end=True), (-42.5, 0.0, 2.5)),
-    Param('float_range_2_params', Float % Range(-3.5, 3.5),
-          (-3.5, 0.0, 3.49)),
-    Param('float_range_2_params_i_e',
-          Float % Range(-3.5, 3.5, inclusive_end=True), (-3.5, 0.0, 3.5)),
-    Param('float_range_2_params_no_i',
-          Float % Range(-3.5, 3.5, inclusive_start=False),
-          (-3.49, 0.0, 3.49)),
-    Param('float_range_2_params_i_e_ex_s',
-          Float % Range(-3.5, 3.5, inclusive_start=False,
-                        inclusive_end=True),
-          (-3.49, 0.0, 3.49)),
-)
-
-
 def collection_params():
     # collection parameters
-    yield Param('int_list', List[Int], (int_values))
-    yield Param('float_list', List[Float], (float_values))
-    yield Param('int_set', Set[Int], (int_values))
-    yield Param('float_set', Set[Float], (float_values))
+    yield Param('int_list', List[Int], (int_params))
+    yield Param('float_list', List[Float], (float_params))
+    yield Param('int_set', Set[Int], (int_params))
+    yield Param('float_set', Set[Float], (float_params))
 
 
 def string_params():
@@ -408,14 +373,13 @@ def register_test_cases(plugin, input, selected_params):
             completed_collection_params = {}
             for (name, value) in param_dict.items():
                 if value.type == List[Int] or value.type == List[Float]:
-                    selected_value = value.domain[num_functions %
-                                                  len(value.domain)]
-                    selected_name = selected_value.base_name + '_' + name
-                    selected_type = List[selected_value.type]
-                    new_param = Param(name, selected_type,
-                                      selected_value.domain)
+                    for selected_value in value.domain():
+                        selected_name = selected_value.base_name + '_' + name
+                        selected_type = List[selected_value.type]
+                        new_param = Param(name, selected_type,
+                                        selected_value.domain)
 
-                    param_val = []
+                        param_val = []
                     for _ in range(sig.num_outputs):
                         selected_size = len(selected_value.domain)
                         param_val.append(
@@ -427,14 +391,13 @@ def register_test_cases(plugin, input, selected_params):
 
                     chosen_param_values.update({selected_name: param_val})
                 elif value.type == Set[Int] or value.type == Set[Float]:
-                    selected_value = value.domain[num_functions %
-                                                  len(value.domain)]
-                    selected_name = selected_value.base_name + '_' + name
-                    selected_type = Set[selected_value.type]
-                    new_param = Param(name, selected_type,
-                                      selected_value.domain)
+                    for selected_value in value.domain():
+                        selected_name = selected_value.base_name + '_' + name
+                        selected_type = Set[selected_value.type]
+                        new_param = Param(name, selected_type,
+                                        selected_value.domain)
 
-                    param_val = set()
+                        param_val = set()
                     for val in range(sig.num_outputs):
                         selected_size = len(selected_value.domain)
                         param_val.add(
