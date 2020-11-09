@@ -7,6 +7,8 @@
 # ----------------------------------------------------------------------------
 from itertools import product, chain
 from collections import namedtuple
+from random import randint
+
 import pandas as pd
 import numpy as np
 
@@ -244,10 +246,43 @@ def float_params():
 
 def collection_params():
     # collection parameters
-    yield Param('int_list', List[Int], (int_params))
-    yield Param('float_list', List[Float], (float_params))
-    yield Param('int_set', Set[Int], (int_params))
-    yield Param('float_set', Set[Float], (float_params))
+    params = [Param('int_list', List[Int], (int_params)),
+              Param('float_list', List[Float], (float_params)),
+              Param('int_set', Set[Int], (int_params)),
+              Param('float_set', Set[Float], (float_params))]
+
+    for param in params:
+        if param.type == List[Int] or param.type == List[Float]:
+            for selected_value in param.domain():
+                selected_name = selected_value.base_name + '_' + \
+                    param.base_name
+                selected_type = List[selected_value.type]
+                new_param = Param(param.base_name, selected_type,
+                                  selected_value.domain)
+
+                param_val = []
+            for _ in range(randint(1, 3)):
+                selected_size = len(selected_value.domain)
+                param_val.append(
+                    selected_value.domain[selected_size %
+                                          randint(1, 3)])
+
+        elif param.type == Set[Int] or param.type == Set[Float]:
+            for selected_value in param.domain():
+                selected_name = selected_value.base_name + '_' + \
+                    param.base_name
+                selected_type = Set[selected_value.type]
+                new_param = Param(param.base_name, selected_type,
+                                  selected_value.domain)
+
+                param_val = set()
+            for _ in range(randint(1, 3)):
+                selected_size = len(selected_value.domain)
+                param_val.add(
+                    selected_value.domain[selected_size %
+                                          randint(1, 3)])
+
+        yield {selected_name: new_param}, {selected_name: param_val}
 
 
 def string_params():
@@ -360,62 +395,17 @@ def register_test_cases(plugin, input, selected_params):
                 input_name_to_named_tuple_dict.update({name: input_})
 
             param_dict = {}
-            for i, param in enumerate(params):
-                print(param)
-                param_dict.update({param.base_name + f'_{i}': param})
-
             chosen_param_values = {}
-            removed_names = []
-            # Collection params come in without a fully specified type, they
-            # know they are a List or a Set of Ints or Floats, but they don't
-            # yet know what types of Ints or Floats they are going to be
-            # composed of
-            completed_collection_params = {}
-            for (name, value) in param_dict.items():
-                if value.type == List[Int] or value.type == List[Float]:
-                    for selected_value in value.domain():
-                        selected_name = selected_value.base_name + '_' + name
-                        selected_type = List[selected_value.type]
-                        new_param = Param(name, selected_type,
-                                        selected_value.domain)
-
-                        param_val = []
-                    for _ in range(sig.num_outputs):
-                        selected_size = len(selected_value.domain)
-                        param_val.append(
-                            selected_value.domain[selected_size %
-                                                  sig.num_outputs])
-
-                    removed_names.append(name)
-                    completed_collection_params[selected_name] = new_param
-
-                    chosen_param_values.update({selected_name: param_val})
-                elif value.type == Set[Int] or value.type == Set[Float]:
-                    for selected_value in value.domain():
-                        selected_name = selected_value.base_name + '_' + name
-                        selected_type = Set[selected_value.type]
-                        new_param = Param(name, selected_type,
-                                        selected_value.domain)
-
-                        param_val = set()
-                    for val in range(sig.num_outputs):
-                        selected_size = len(selected_value.domain)
-                        param_val.add(
-                            selected_value.domain[selected_size %
-                                                  sig.num_outputs])
-
-                    removed_names.append(name)
-                    completed_collection_params[selected_name] = new_param
-
-                    chosen_param_values.update({selected_name: param_val})
+            for i, param in enumerate(params):
+                if type(param) == tuple:
+                    param_dict.update(param[0])
+                    chosen_param_values.update(param[1])
                 else:
-                    domain_size = len(value.domain)
+                    name = param.base_name + f'_{i}'
+                    param_dict.update({name: param})
+                    domain_size = len(param.domain)
                     chosen_param_values.update(
-                        {name: value.domain[sig.num_outputs % domain_size]})
-
-            for name in removed_names:
-                param_dict.pop(name)
-            param_dict.update(completed_collection_params)
+                        {name: param.domain[sig.num_outputs % domain_size]})
 
             # This dictionary allows for easy registration of Qiime parameters
             param_name_to_type_dict = \
