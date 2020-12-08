@@ -5,7 +5,7 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-from itertools import product, chain
+from itertools import product, chain, combinations
 from collections import namedtuple
 from random import randint
 
@@ -28,6 +28,14 @@ from q2_mystery_stew.template import (rewrite_function_signature,
                                       function_template_3output)
 from q2_mystery_stew.templatable_echo_fmt import (EchoOutput, EchoOutputFmt,
                                                   EchoOutputDirFmt)
+
+Sig = namedtuple('Sig', ['num_params', 'num_outputs', 'template'])
+Param = namedtuple('Param', ['base_name', 'qiime_type', 'view_type', 'domain'])
+Input = namedtuple('Input', ['base_name', 'qiime_type', 'view_type', 'domain'])
+
+function_templates = (function_template_1output,
+                      function_template_2output,
+                      function_template_3output)
 
 
 def create_plugin(ints=False, floats=False, collections=False, strings=False,
@@ -73,50 +81,45 @@ def create_plugin(ints=False, floats=False, collections=False, strings=False,
     selected_types = []
 
     if ints:
-        selected_types.append(int_params)
+        selected_types.append(int_params())
 
     if floats:
-        selected_types.append(float_params)
+        selected_types.append(float_params())
 
     if collections:
-        selected_types.append(collection_params)
+        if ints:
+            selected_types.append(list_params(int_params()))
+            selected_types.append(set_params(int_params()))
+
 
     if strings:
-        selected_types.append(string_params)
+        selected_types.append(string_params())
 
     if bools:
-        selected_types.append(bool_params)
+        selected_types.append(bool_params())
 
-    if cat_cols:
-        selected_types.append(cat_col_params)
+    # if cat_cols:
+    #     selected_types.append(cat_col_params())
 
-    if num_cols:
-        selected_types.append(num_col_params)
+    # if num_cols:
+    #     selected_types.append(num_col_params)
 
-    if mds:
-        selected_types.append(md_params)
+    # if mds:
+    #     selected_types.append(md_params)
 
     if not selected_types:
         raise ValueError("Must select at least one parameter type to use")
 
-    # itertools.chain didn't produce the results I wanted, so I made this. I
-    # want the result of the chaining to still be a generator
-    def chain_generators():
-        for type in selected_types:
-            yield from type()
+    # # itertools.chain didn't produce the results I wanted, so I made this. I
+    # # want the result of the chaining to still be a generator
+    # # instantiate generators first to solve above
+    # def chain_generators():
+    #     for type in selected_types:
+    #         yield from type()
 
-    register_test_cases(plugin, inputs, chain_generators)
+    register_single_tests(plugin, chain.from_iterable(selected_types))
 
     return plugin
-
-
-Sig = namedtuple('Sig', ['num_params', 'num_outputs', 'template'])
-Param = namedtuple('Param', ['base_name', 'type', 'domain'])
-Input = namedtuple('Input', ['base_name', 'qiime_type', 'format', 'domain'])
-
-function_templates = (function_template_1output,
-                      function_template_2output,
-                      function_template_3output)
 
 
 class UsageInstantiator:
@@ -205,43 +208,71 @@ class UsageInstantiator:
 
 
 def generate_signatures():
-    for num_params in range(1, len(function_templates) + 1):
+    for num_params in range(1, 4):
         for num_outputs in range(1, len(function_templates) + 1):
             yield Sig(num_params, num_outputs,
                       function_templates[num_outputs - 1])
 
 
+def generate_simple_signatures():
+    yield Sig(1, 1, function_template_1output)
+
+
 def int_params():
-    yield Param('single_int', Int, (-1, 0, 1))
-    yield Param('int_range_1_param', Int % Range(3), (-42, 0, 2))
+    yield Param('single_int', Int, int, (-1, 0, 1))
+    yield Param('int_range_1_param', Int % Range(3), int, (-42, 0, 2))
     yield Param('int_range_1_param_i_e', Int % Range(3, inclusive_end=True),
-                (-43, 0, 3))
-    yield Param('int_range_2_params', Int % Range(-3, 4), (-3, 0, 3))
+                int, (-43, 0, 3))
+    yield Param('int_range_2_params', Int % Range(-3, 4), int, (-3, 0, 3))
     yield Param('int_range_2_params_i_e',
-                Int % Range(-3, 4, inclusive_end=True), (-3, 0, 4))
+                Int % Range(-3, 4, inclusive_end=True), int, (-3, 0, 4))
     yield Param('int_range_2_params_no_i',
-                Int % Range(-3, 4, inclusive_start=False), (-2, 0, 3))
+                Int % Range(-3, 4, inclusive_start=False), int, (-2, 0, 3))
     yield Param('int_range_2_params_i_e_ex_s',
                 Int % Range(-3, 4, inclusive_start=False, inclusive_end=True),
-                (-2, 0, 4))
+                int, (-2, 0, 4))
 
 
 def float_params():
-    yield Param('single_float', Float, (-1.5, 0.0, 1.5))
-    yield Param('float_range_1_param', Float % Range(2.5), (-42.5, 0.0, 2.49))
+    yield Param('single_float', Float, float, (-1.5, 0.0, 1.5))
+    yield Param('float_range_1_param', Float % Range(2.5), float, (-42.5, 0.0, 2.49))
     yield Param('float_range_1_param_i_e',
-                Float % Range(2.5, inclusive_end=True), (-42.5, 0.0, 2.5))
-    yield Param('float_range_2_params', Float % Range(-3.5, 3.5),
+                Float % Range(2.5, inclusive_end=True), float, (-42.5, 0.0, 2.5))
+    yield Param('float_range_2_params', Float % Range(-3.5, 3.5), float,
                 (-3.5, 0.0, 3.49))
     yield Param('float_range_2_params_i_e',
-                Float % Range(-3.5, 3.5, inclusive_end=True), (-3.5, 0.0, 3.5))
+                Float % Range(-3.5, 3.5, inclusive_end=True), float, (-3.5, 0.0, 3.5))
     yield Param('float_range_2_params_no_i',
-                Float % Range(-3.5, 3.5, inclusive_start=False),
+                Float % Range(-3.5, 3.5, inclusive_start=False), float,
                 (-3.49, 0.0, 3.49))
     yield Param('float_range_2_params_i_e_ex_s',
                 Float % Range(-3.5, 3.5, inclusive_start=False,
                               inclusive_end=True),
-                (-3.49, 0.0, 3.49))
+                float, (-3.49, 0.0, 3.49))
+
+
+def nonull_powerset(iterable):
+    "powerset([1,2,3]) --> (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(1, len(s)+1))
+
+
+def list_params(generator):
+    for param in generator:
+        yield Param(
+            param.base_name + "_list",
+            List[param.qiime_type],
+            param.view_type,
+            tuple(list(x) for x in nonull_powerset(param.domain)))
+
+
+def set_params(generator):
+    for param in generator:
+        yield Param(
+            param.base_name + "_set",
+            Set[param.qiime_type],
+            param.view_type,
+            tuple(set(x) for x in nonull_powerset(param.domain)))
 
 
 def collection_params():
@@ -286,21 +317,19 @@ def collection_params():
 
 
 def string_params():
-    yield Param('string',
-                Str, ('', 'some string'))
-    yield Param('string_choices',
-                Str % Choices('A', 'B'), ('A', 'B'))
+    yield Param('string', Str, str, ('', 'some string'))
+    yield Param('string_choices', Str % Choices('A', 'B'), str, ('A', 'B'))
 
 
 def bool_params():
     yield Param('boolean',
-                Bool, (True, False))
+                Bool, bool, (True, False))
     yield Param('boolean_true',
-                Bool % Choices(True), (True,))
+                Bool % Choices(True), bool, (True,))
     yield Param('boolean_false',
-                Bool % Choices(False), (False,))
+                Bool % Choices(False), bool, (False,))
     yield Param('boolean_choice',
-                Bool % Choices(True, False), (True, False))
+                Bool % Choices(True, False), bool, (True, False))
 
 
 mdc_cat_val = pd.Series(['a'], index=['a'], name='cat')
@@ -363,10 +392,38 @@ def factory(format_, value):
     return qiime2.Artifact.import_data(format_, value)
 
 
+
+
+def register_single_tests(plugin, selected_params):
+    for idx, param in enumerate(selected_params):
+        action_name = f'func_single_{idx}'
+        param_annotations = {param.base_name: param.view_type}
+        qiime_annotations = {param.base_name: param.qiime_type}
+        func = function_template_1output
+
+        rewrite_function_signature(func, {}, param_annotations, 1, action_name)
+        outputs = [('output_1', EchoOutput)]
+        usage_example = {
+            f'example_{i}': UsageInstantiator(
+                {}, {param.base_name: val}, outputs, action_name)
+            for i, val in enumerate(param.domain)
+        }
+
+        plugin.methods.register_function(
+            function=func,
+            inputs={},
+            parameters=qiime_annotations,
+            outputs=outputs,
+            name=action_name,
+            description='',
+            examples=usage_example
+        )
+
+
 # Selecting a value via the usage of `length(iterable) % some_value` as an
 # index allows for a fairly arbitrary selection of a value without resorting to
 # any form of randomization
-def register_test_cases(plugin, input, selected_params):
+def register_test_cases(plugin, selected_params):
     num_functions = 0
     signatures = generate_signatures()
 
