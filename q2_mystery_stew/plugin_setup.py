@@ -97,14 +97,14 @@ def create_plugin(ints=False, floats=False, collections=False, strings=False,
     if bools:
         selected_types.append(bool_params())
 
-    # if cat_cols:
-    #     selected_types.append(cat_col_params())
+    if cat_cols:
+        selected_types.append(cat_col_params())
 
-    # if num_cols:
-    #     selected_types.append(num_col_params)
+    if num_cols:
+        selected_types.append(num_col_params())
 
-    # if mds:
-    #     selected_types.append(md_params)
+    if mds:
+        selected_types.append(md_params())
 
     if not selected_types:
         raise ValueError("Must select at least one parameter type to use")
@@ -342,7 +342,7 @@ mdc_cat_val_nan.index.name = 'id'
 
 
 def cat_col_params():
-    yield Param('mdc_cat', MetadataColumn[Categorical],
+    yield Param('mdc_cat', MetadataColumn[Categorical], pd.Series,
                 (qiime2.CategoricalMetadataColumn(mdc_cat_val),
                  qiime2.CategoricalMetadataColumn(mdc_cat_val_nan)))
 
@@ -358,14 +358,15 @@ mdc_num_nan.index.name = 'id'
 
 
 def num_col_params():
-    yield Param('mdc_num', MetadataColumn[Numeric],
+    yield Param('mdc_num', MetadataColumn[Numeric], pd.Series,
                 (qiime2.NumericMetadataColumn(mdc_num_val),
                  qiime2.NumericMetadataColumn(mdc_num_val_nan),
                  qiime2.NumericMetadataColumn(mdc_num_nan)))
 
 
 def md_params():
-    yield Param('md', Metadata, (qiime2.Metadata(pd.DataFrame({'a': '1'},
+    yield Param('md', Metadata, pd.DataFrame,
+                                 (qiime2.Metadata(pd.DataFrame({'a': '1'},
                                                  index=pd.Index(['0'],
                                                  name='id'))),
                                  qiime2.Metadata(pd.DataFrame({'a': '1'},
