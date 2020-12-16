@@ -91,7 +91,6 @@ def create_plugin(ints=False, floats=False, collections=False, strings=False,
             selected_types.append(list_params(int_params()))
             selected_types.append(set_params(int_params()))
 
-
     if strings:
         selected_types.append(string_params())
 
@@ -235,13 +234,16 @@ def int_params():
 
 def float_params():
     yield Param('single_float', Float, float, (-1.5, 0.0, 1.5))
-    yield Param('float_range_1_param', Float % Range(2.5), float, (-42.5, 0.0, 2.49))
+    yield Param('float_range_1_param', Float % Range(2.5), float,
+                (-42.5, 0.0, 2.49))
     yield Param('float_range_1_param_i_e',
-                Float % Range(2.5, inclusive_end=True), float, (-42.5, 0.0, 2.5))
+                Float % Range(2.5, inclusive_end=True), float,
+                (-42.5, 0.0, 2.5))
     yield Param('float_range_2_params', Float % Range(-3.5, 3.5), float,
                 (-3.5, 0.0, 3.49))
     yield Param('float_range_2_params_i_e',
-                Float % Range(-3.5, 3.5, inclusive_end=True), float, (-3.5, 0.0, 3.5))
+                Float % Range(-3.5, 3.5, inclusive_end=True), float,
+                (-3.5, 0.0, 3.5))
     yield Param('float_range_2_params_no_i',
                 Float % Range(-3.5, 3.5, inclusive_start=False), float,
                 (-3.49, 0.0, 3.49))
@@ -390,8 +392,6 @@ inputs = (
 
 def factory(format_, value):
     return qiime2.Artifact.import_data(format_, value)
-
-
 
 
 def register_single_tests(plugin, selected_params):
