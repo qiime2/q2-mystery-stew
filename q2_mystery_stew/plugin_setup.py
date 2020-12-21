@@ -116,7 +116,7 @@ def create_plugin(ints=False, floats=False, collections=False, strings=False,
     #     for type in selected_types:
     #         yield from type()
 
-    register_single_tests(plugin, chain.from_iterable(selected_types))
+    register_double_tests(plugin, chain.from_iterable(selected_types))
 
     return plugin
 
@@ -408,6 +408,33 @@ def register_single_tests(plugin, selected_params):
             f'example_{i}': UsageInstantiator(
                 {}, {param.base_name: val}, outputs, action_name)
             for i, val in enumerate(param.domain)
+        }
+
+        plugin.methods.register_function(
+            function=func,
+            inputs={},
+            parameters=qiime_annotations,
+            outputs=outputs,
+            name=action_name,
+            description='',
+            examples=usage_example
+        )
+
+
+def register_double_tests(plugin, selected_params):
+    for idx, params in enumerate(product(selected_params, repeat=2)):
+        action_name = f'func_single_{idx}'
+        param_annotations = {param.base_name: param.view_type for param in params}
+        qiime_annotations = {param.base_name: param.qiime_type for param in params}
+        func = function_template_1output
+
+        rewrite_function_signature(func, {}, param_annotations, 1, action_name)
+        outputs = [('output_1', EchoOutput)]
+        usage_example = {
+            f'example_{i}': UsageInstantiator(
+                {}, {param.base_name: val for param in params}, outputs, action_name)
+            # We need a way to select values for multiple params here
+            for i, val in enumerate(params[0].domain)
         }
 
         plugin.methods.register_function(

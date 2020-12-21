@@ -35,7 +35,7 @@ class TestTemplates(unittest.TestCase):
             for name, example_f in action.examples.items():
                 with self.subTest(example=name, i=i):
                     use = usage.ExecutionUsage()
-                    print(i)
+                    # print(i)
                     example_f(use)
                     i += 1
-        raise ValueError()
+        # raise ValueError()
