@@ -116,7 +116,7 @@ def create_plugin(ints=False, floats=False, collections=False, strings=False,
     #     for type in selected_types:
     #         yield from type()
 
-    register_double_tests(plugin, chain.from_iterable(selected_types))
+    register_triple_tests(plugin, chain.from_iterable(selected_types))
 
     return plugin
 
@@ -366,15 +366,12 @@ def num_col_params():
 
 def md_params():
     yield Param('md', Metadata, pd.DataFrame,
-                                 (qiime2.Metadata(pd.DataFrame({'a': '1'},
-                                                 index=pd.Index(['0'],
-                                                 name='id'))),
-                                 qiime2.Metadata(pd.DataFrame({'a': '1'},
-                                                 index=pd.Index(['0', '1'],
-                                                 name='id'))),
-                                 qiime2.Metadata(pd.DataFrame({},
-                                                 index=pd.Index(['0'],
-                                                 name='id'))),))
+                (qiime2.Metadata(pd.DataFrame({'a': '1'}, index=pd.Index(['0'],
+                                 name='id'))),
+                 qiime2.Metadata(pd.DataFrame({'a': '1'},
+                                 index=pd.Index(['0', '1'], name='id'))),
+                 qiime2.Metadata(pd.DataFrame({}, index=pd.Index(['0'],
+                                 name='id'))),))
 
 
 inputs = (
@@ -424,17 +421,54 @@ def register_single_tests(plugin, selected_params):
 def register_double_tests(plugin, selected_params):
     for idx, params in enumerate(product(selected_params, repeat=2)):
         action_name = f'func_single_{idx}'
-        param_annotations = {param.base_name: param.view_type for param in params}
-        qiime_annotations = {param.base_name: param.qiime_type for param in params}
+        param_annotations = \
+            {param.base_name: param.view_type for param in params}
+        qiime_annotations = \
+            {param.base_name: param.qiime_type for param in params}
         func = function_template_1output
 
+        param_name1 = params[0].base_name
+        param_name2 = params[1].base_name
+        params = product(params[0].domain, params[1].domain)
         rewrite_function_signature(func, {}, param_annotations, 1, action_name)
         outputs = [('output_1', EchoOutput)]
         usage_example = {
             f'example_{i}': UsageInstantiator(
-                {}, {param.base_name: val for param in params}, outputs, action_name)
-            # We need a way to select values for multiple params here
-            for i, val in enumerate(params[0].domain)
+                {}, {param_name1: val1, param_name2: val2},
+                outputs, action_name) for i, (val1, val2) in enumerate(params)
+        }
+
+        plugin.methods.register_function(
+            function=func,
+            inputs={},
+            parameters=qiime_annotations,
+            outputs=outputs,
+            name=action_name,
+            description='',
+            examples=usage_example
+        )
+
+
+def register_triple_tests(plugin, selected_params):
+    for idx, params in enumerate(product(selected_params, repeat=3)):
+        action_name = f'func_single_{idx}'
+        param_annotations = \
+            {param.base_name: param.view_type for param in params}
+        qiime_annotations = \
+            {param.base_name: param.qiime_type for param in params}
+        func = function_template_1output
+
+        param_name1 = params[0].base_name
+        param_name2 = params[1].base_name
+        param_name3 = params[2].base_name
+        params = product(params[0].domain, params[1].domain, params[2].domain)
+        rewrite_function_signature(func, {}, param_annotations, 1, action_name)
+        outputs = [('output_1', EchoOutput)]
+        usage_example = {
+            f'example_{i}': UsageInstantiator(
+                {}, {param_name1: val1, param_name2: val2, param_name3: val3},
+                outputs, action_name) for i,
+                                      (val1, val2, val3) in enumerate(params)
         }
 
         plugin.methods.register_function(
