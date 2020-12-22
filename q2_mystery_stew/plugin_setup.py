@@ -467,8 +467,8 @@ def register_triple_tests(plugin, selected_params):
         usage_example = {
             f'example_{i}': UsageInstantiator(
                 {}, {param_name1: val1, param_name2: val2, param_name3: val3},
-                outputs, action_name) for i,
-                                      (val1, val2, val3) in enumerate(params)
+                outputs, action_name) for i, (val1, val2,
+                                              val3) in enumerate(params)
         }
 
         plugin.methods.register_function(

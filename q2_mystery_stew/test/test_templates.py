@@ -15,9 +15,9 @@ from q2_mystery_stew.plugin_setup import create_plugin
 
 class TestTemplates(unittest.TestCase):
     package = 'q2_mystery_stew.test'
-    plugin = create_plugin(ints=True)#, floats=True, collections=True,
-                           #strings=True, bools=True, cat_cols=True,
-                           #num_cols=True, mds=True)
+    plugin = create_plugin(ints=True, floats=True, collections=True,
+                           strings=True, bools=True, cat_cols=True,
+                           num_cols=True, mds=True)
 
     def setUp(self):
         pm = PluginManager(add_plugins=False)
