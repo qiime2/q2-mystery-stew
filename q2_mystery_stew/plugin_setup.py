@@ -422,20 +422,23 @@ def register_double_tests(plugin, selected_params):
     for idx, params in enumerate(product(selected_params, repeat=2)):
         action_name = f'func_double_{idx}'
         param_annotations = \
-            {param.base_name: param.view_type for param in params}
+            {param.base_name + '_' + str(i): param.view_type for i,
+             param in enumerate(params)}
         qiime_annotations = \
-            {param.base_name: param.qiime_type for param in params}
+            {param.base_name + '_' + str(i): param.qiime_type for i,
+             param in enumerate(params)}
         func = function_template_1output
 
-        param_name1 = params[0].base_name
-        param_name2 = params[1].base_name
-        params = product(params[0].domain, params[1].domain)
+        param_name1 = params[0].base_name + '_0'
+        param_name2 = params[1].base_name + '_1'
+        values = product(params[0].domain, params[1].domain)
         rewrite_function_signature(func, {}, param_annotations, 1, action_name)
         outputs = [('output_1', EchoOutput)]
-        usage_example = {
+
+        usage_examples = {
             f'example_{i}': UsageInstantiator(
                 {}, {param_name1: val1, param_name2: val2},
-                outputs, action_name) for i, (val1, val2) in enumerate(params)
+                outputs, action_name) for i, (val1, val2) in enumerate(values)
         }
 
         plugin.methods.register_function(
@@ -445,7 +448,7 @@ def register_double_tests(plugin, selected_params):
             outputs=outputs,
             name=action_name,
             description='',
-            examples=usage_example
+            examples=usage_examples
         )
 
 
@@ -453,18 +456,21 @@ def register_triple_tests(plugin, selected_params):
     for idx, params in enumerate(product(selected_params, repeat=3)):
         action_name = f'func_triple_{idx}'
         param_annotations = \
-            {param.base_name: param.view_type for param in params}
+            {param.base_name + '_' + str(i): param.view_type for i,
+             param in enumerate(params)}
         qiime_annotations = \
-            {param.base_name: param.qiime_type for param in params}
+            {param.base_name + '_' + str(i): param.qiime_type for i,
+             param in enumerate(params)}
         func = function_template_1output
 
-        param_name1 = params[0].base_name
-        param_name2 = params[1].base_name
-        param_name3 = params[2].base_name
+        param_name1 = params[0].base_name + '_0'
+        param_name2 = params[1].base_name + '_1'
+        param_name3 = params[2].base_name + '_2'
         params = product(params[0].domain, params[1].domain, params[2].domain)
         rewrite_function_signature(func, {}, param_annotations, 1, action_name)
         outputs = [('output_1', EchoOutput)]
-        usage_example = {
+
+        usage_examples = {
             f'example_{i}': UsageInstantiator(
                 {}, {param_name1: val1, param_name2: val2, param_name3: val3},
                 outputs, action_name) for i, (val1, val2,
@@ -478,7 +484,7 @@ def register_triple_tests(plugin, selected_params):
             outputs=outputs,
             name=action_name,
             description='',
-            examples=usage_example
+            examples=usage_examples
         )
 
 
