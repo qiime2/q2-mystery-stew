@@ -180,7 +180,7 @@ class UsageInstantiator:
             elif type(arg) == qiime2.sdk.result.Artifact:
                 arg = arg.uuid
 
-            param = f'{name}: {arg}\n'
+            param = f'{name}: {arg}'
 
             output1 = use.get_result('output_1')
             output1.assert_has_line_matching(
