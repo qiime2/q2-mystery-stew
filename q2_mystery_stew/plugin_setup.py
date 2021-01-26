@@ -420,7 +420,7 @@ def register_single_tests(plugin, selected_params):
 
 def register_double_tests(plugin, selected_params):
     for idx, params in enumerate(product(selected_params, repeat=2)):
-        action_name = f'func_single_{idx}'
+        action_name = f'func_double_{idx}'
         param_annotations = \
             {param.base_name: param.view_type for param in params}
         qiime_annotations = \
@@ -451,7 +451,7 @@ def register_double_tests(plugin, selected_params):
 
 def register_triple_tests(plugin, selected_params):
     for idx, params in enumerate(product(selected_params, repeat=3)):
-        action_name = f'func_single_{idx}'
+        action_name = f'func_triple_{idx}'
         param_annotations = \
             {param.base_name: param.view_type for param in params}
         qiime_annotations = \
