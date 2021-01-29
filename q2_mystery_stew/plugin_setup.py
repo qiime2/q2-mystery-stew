@@ -22,6 +22,7 @@ import q2_mystery_stew
 from .type import (SingleInt1, SingleInt2, IntWrapper,
                    WrappedInt1, WrappedInt2)
 from .format import SingleIntFormat, SingleIntDirectoryFormat
+from .util import reservoir_sampling
 from q2_mystery_stew.template import (rewrite_function_signature,
                                       function_template_1output,
                                       function_template_2output,
@@ -116,7 +117,7 @@ def create_plugin(ints=False, floats=False, collections=False, strings=False,
     #     for type in selected_types:
     #         yield from type()
 
-    register_triple_tests(plugin, chain.from_iterable(selected_types))
+    register_double_tests(plugin, chain.from_iterable(selected_types))
 
     return plugin
 
@@ -419,7 +420,7 @@ def register_single_tests(plugin, selected_params):
 
 
 def register_double_tests(plugin, selected_params):
-    for idx, params in enumerate(product(selected_params, repeat=2)):
+    for idx, params in enumerate(reservoir_sampling(combinations(selected_params, 2), 5)):
         action_name = f'func_double_{idx}'
         param_annotations = \
             {param.base_name + '_' + str(i): param.view_type for i,
@@ -432,6 +433,7 @@ def register_double_tests(plugin, selected_params):
         param_name1 = params[0].base_name + '_0'
         param_name2 = params[1].base_name + '_1'
         values = product(params[0].domain, params[1].domain)
+        values = reservoir_sampling(values, 3)
         rewrite_function_signature(func, {}, param_annotations, 1, action_name)
         outputs = [('output_1', EchoOutput)]
 
@@ -453,7 +455,7 @@ def register_double_tests(plugin, selected_params):
 
 
 def register_triple_tests(plugin, selected_params):
-    for idx, params in enumerate(product(selected_params, repeat=3)):
+    for idx, params in enumerate(combinations(selected_params, 3)):
         action_name = f'func_triple_{idx}'
         param_annotations = \
             {param.base_name + '_' + str(i): param.view_type for i,
