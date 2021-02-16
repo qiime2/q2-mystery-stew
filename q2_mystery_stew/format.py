@@ -24,6 +24,10 @@ class SingleIntFormat(TextFileFormat):
             if fh.readline():
                 raise ValidationError("Too many lines in file.")
 
+    def get_int(self):
+        with self.open() as fh:
+            return int(fh.readline().rstrip('\n'))
+
 
 SingleIntDirectoryFormat = model.SingleFileDirectoryFormat(
     'SingleIntDirectoryFormat', 'int.txt', SingleIntFormat)

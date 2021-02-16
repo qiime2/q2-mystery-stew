@@ -1,7 +1,12 @@
 import numpy as np
 
 
-def reservoir_sampling(iterator, n, seed=42):
+# TODO: this may be broken, should sample a consecutive array and test the dist
+def reservoir_sampler(iterator, n, seed=42):
+    if n is None:
+        yield from iterator
+        return
+
     if seed is not None:
         np.random.seed(seed)
 
