@@ -51,4 +51,4 @@ jobs:
       with:
         package-name: q2-mystery-stew
         build-target: staging
-        additional-tests: py.test --pyargs q2_mystery_stew --capture=tee-sys
+        additional-tests: py.test --pyargs q2_mystery_stew
