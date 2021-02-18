@@ -1,2 +1,8 @@
 # q2-mystery-stew
-This plugin exists to define integration tests between interfaces and the framework.
+
+![](https://github.com/qiime2/q2-mystery-stew/workflows/ci/badge.svg)
+
+This is a QIIME 2 plugin. For details on QIIME 2, see https://qiime2.org.
+
+This plugin exists to define integration tests between interfaces and the
+framework.
