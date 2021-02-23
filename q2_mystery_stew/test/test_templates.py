@@ -6,32 +6,32 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import unittest
+import pytest
 
 from qiime2.sdk import PluginManager, usage
 
 from q2_mystery_stew.plugin_setup import create_plugin
 
 
-class TestTemplates(unittest.TestCase):
-    package = 'q2_mystery_stew.test'
-    plugin = create_plugin(ints=True)
+def get_tests():
+    plugin = create_plugin()
+    tests = []
+    pm = PluginManager(add_plugins=False)
+    pm.add_plugin(plugin)
+    for action in plugin.actions.values():
+        for name in action.examples:
+            tests.append((action, name))
+    return tests
 
-    def setUp(self):
-        pm = PluginManager(add_plugins=False)
-        pm.add_plugin(self.plugin)
 
-    def test_examples(self):
-        self.execute_examples()
+def _labeler(val):
+    if hasattr(val, 'id'):
+        return val.id
+    return val
 
-    def execute_examples(self):
-        if self.plugin is None:
-            raise ValueError('Attempted to run `execute_examples` without '
-                             'configuring test harness.')
-        i = 0
-        for _, action in self.plugin.actions.items():
-            for name, example_f in action.examples.items():
-                with self.subTest(example=name, i=i):
-                    use = usage.ExecutionUsage()
-                    example_f(use)
-                    i += 1
+
+@pytest.mark.parametrize('action,example', get_tests(), ids=_labeler)
+def test_case(action, example):
+    example_f = action.examples[example]
+    use = usage.ExecutionUsage()
+    example_f(use)
