@@ -15,10 +15,10 @@ import pandas as pd
 import numpy as np
 
 import qiime2
+from qiime2.core.type.util import is_metadata_column_type, is_metadata_type
 from qiime2.plugin import (Plugin, Int, Range, Float, Bool, Str, Choices,
                            List, Set, Metadata, MetadataColumn, Categorical,
-                           Numeric, UsageAction, UsageInputs,
-                           UsageOutputNames, Properties)
+                           Numeric, Properties)
 from qiime2.sdk.util import is_semantic_type
 
 import q2_mystery_stew
@@ -86,10 +86,11 @@ def create_plugin(**filters):
         'ints': int_params,
         'floats': float_params,
         'strings': string_params,
-        'bools': bool_params
+        'bools': bool_params,
+        'metadata': simple_metadata,
+        'primitive_unions': primitive_unions,
+        'artifacts': artifact_params
     }
-
-    selected_types.append(artifact_params())
 
     for key, generator in basics.items():
         if not filters or filters.get(key, False):
@@ -100,8 +101,6 @@ def create_plugin(**filters):
 
     if not selected_types:
         raise ValueError("Must select at least one parameter type to use")
-
-    selected_types.append(primitive_unions())
 
     register_single_type_tests(plugin, selected_types)
 
@@ -126,19 +125,37 @@ class UsageInstantiator:
         for name, argument in self.inputs.items():
             template = self.param_templates[name]
 
-            if argument is None or not is_semantic_type(template.qiime_type):
-                inputs[name] = transformed_inputs[name] = argument
-            else:
+            if argument is None:
+                inputs[name] = transformed_inputs[name] = None
+            elif is_semantic_type(template.qiime_type):
                 inputs[name] = use.init_data(argument.__name__, argument)
                 artifact = argument()
                 view = artifact.view(template.view_type)
                 view.__hide_from_garbage_collector = artifact
                 transformed_inputs[name] = view
+            elif is_metadata_type(template.qiime_type):
+                if is_metadata_column_type(template.qiime_type):
+                    factory, column_name = argument
+                else:
+                    factory, column_name = argument, None
+
+                md_rec = use.init_metadata(factory.__name__, factory)
+                md = factory()
+
+                if column_name is None:
+                    inputs[name] = md_rec
+                    transformed_inputs[name] = md
+                else:
+                    inputs[name] = use.get_metadata_column(column_name, md_rec)
+                    transformed_inputs[name] = md.get_column(column_name)
+
+            else:
+                inputs[name] = transformed_inputs[name] = argument
 
         use.action(
-            UsageAction(plugin_id='mystery_stew', action_id=self.name),
-            UsageInputs(**inputs),
-            UsageOutputNames(**self.output_names),
+            use.UsageAction(plugin_id='mystery_stew', action_id=self.name),
+            use.UsageInputs(**inputs),
+            use.UsageOutputNames(**self.output_names),
         )
 
         for idx, (output_name, expected_type) in enumerate(self.outputs):
@@ -184,6 +201,21 @@ def artifact_params():
                         (single_int2,))
     yield ParamTemplate('union_type', SingleInt1 | SingleInt2, SingleIntFormat,
                         (single_int1, single_int2))
+
+
+def metadata1():
+    df = pd.DataFrame({'col1': ['a', 'b', 'c'], 'col2': ['x', 'y', 'z']},
+                     index=['id1', 'id2', 'id3'])
+    df.index.name = 'id'
+    return qiime2.Metadata(df)
+
+
+def simple_metadata():
+    yield ParamTemplate('metadata_cat', Metadata, qiime2.Metadata,
+                        (metadata1,))
+    yield ParamTemplate('column_cat', MetadataColumn[Categorical],
+                        qiime2.CategoricalMetadataColumn,
+                        ([metadata1, 'col1'], [metadata1, 'col2']))
 
 
 def int_params():
@@ -302,7 +334,8 @@ def register_single_type_tests(plugin, list_of_params):
             qiime_annotations[param_name] = param.qiime_type
             defaults[param_name] = None
 
-            if not is_semantic_type(param.qiime_type):
+            if (not is_semantic_type(param.qiime_type)
+                    and not is_metadata_type(param.qiime_type)):
                 # Defaults
                 for i_, default in enumerate(param.domain, 1):
                     param_name = f'default{i_}_{param.base_name}'
