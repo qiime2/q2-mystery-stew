@@ -7,18 +7,15 @@
 # ----------------------------------------------------------------------------
 from itertools import product, chain, combinations
 from collections import namedtuple, deque
-from random import randint
 import re
 from inspect import Parameter
 
 import pandas as pd
-import numpy as np
 
 import qiime2
 from qiime2.core.type.util import is_metadata_column_type, is_metadata_type
 from qiime2.plugin import (Plugin, Int, Range, Float, Bool, Str, Choices,
-                           List, Set, Metadata, MetadataColumn, Categorical,
-                           Numeric, Properties)
+                           List, Set, Metadata, MetadataColumn, Categorical)
 from qiime2.sdk.util import is_semantic_type
 
 import q2_mystery_stew
@@ -34,8 +31,10 @@ from q2_mystery_stew.template import (rewrite_function_signature,
 from q2_mystery_stew.templatable_echo_fmt import (EchoOutput, EchoOutputFmt,
                                                   EchoOutputDirFmt)
 
+
 ParamTemplate = namedtuple('ParamTemplate', ['base_name', 'qiime_type',
                                              'view_type', 'domain'])
+
 
 function_templates = (function_template_1output,
                       function_template_2output,
@@ -191,8 +190,10 @@ class UsageInstantiator:
 def single_int1():
     return qiime2.Artifact.import_data('SingleInt1', 42)
 
+
 def single_int2():
     return qiime2.Artifact.import_data('SingleInt2', 2019)
+
 
 def artifact_params():
     yield ParamTemplate('simple_type1', SingleInt1, SingleIntFormat,
@@ -205,7 +206,7 @@ def artifact_params():
 
 def metadata1():
     df = pd.DataFrame({'col1': ['a', 'b', 'c'], 'col2': ['x', 'y', 'z']},
-                     index=['id1', 'id2', 'id3'])
+                      index=['id1', 'id2', 'id3'])
     df.index.name = 'id'
     return qiime2.Metadata(df)
 
@@ -226,33 +227,36 @@ def int_params():
     yield ParamTemplate('int_range_2_params',
                         Int % Range(-3, 4), int, (-3, 0, 3))
     yield ParamTemplate('int_range_2_params_i_e',
-                Int % Range(-3, 4, inclusive_end=True), int, (-3, 0, 4))
+                        Int % Range(-3, 4, inclusive_end=True), int,
+                        (-3, 0, 4))
     yield ParamTemplate('int_range_2_params_no_i',
-                Int % Range(-3, 4, inclusive_start=False), int, (-2, 0, 3))
+                        Int % Range(-3, 4, inclusive_start=False), int,
+                        (-2, 0, 3))
     yield ParamTemplate('int_range_2_params_i_e_ex_s',
-                Int % Range(-3, 4, inclusive_start=False, inclusive_end=True),
-                int, (-2, 0, 4))
+                        Int % Range(-3, 4, inclusive_start=False,
+                                    inclusive_end=True),
+                        int, (-2, 0, 4))
 
 
 def float_params():
     yield ParamTemplate('single_float', Float, float, (-1.5, 0.0, 1.5))
     yield ParamTemplate('float_range_1_param', Float % Range(2.5), float,
-                (-42.5, 0.0, 2.49))
+                        (-42.5, 0.0, 2.49))
     yield ParamTemplate('float_range_1_param_i_e',
-                Float % Range(2.5, inclusive_end=True), float,
-                (-42.5, 0.0, 2.5))
+                        Float % Range(2.5, inclusive_end=True), float,
+                        (-42.5, 0.0, 2.5))
     yield ParamTemplate('float_range_2_params', Float % Range(-3.5, 3.5),
-                float, (-3.5, 0.0, 3.49))
+                        float, (-3.5, 0.0, 3.49))
     yield ParamTemplate('float_range_2_params_i_e',
-                Float % Range(-3.5, 3.5, inclusive_end=True), float,
-                (-3.5, 0.0, 3.5))
+                        Float % Range(-3.5, 3.5, inclusive_end=True), float,
+                        (-3.5, 0.0, 3.5))
     yield ParamTemplate('float_range_2_params_no_i',
-                Float % Range(-3.5, 3.5, inclusive_start=False), float,
-                (-3.49, 0.0, 3.49))
+                        Float % Range(-3.5, 3.5, inclusive_start=False), float,
+                        (-3.49, 0.0, 3.49))
     yield ParamTemplate('float_range_2_params_i_e_ex_s',
-                Float % Range(-3.5, 3.5, inclusive_start=False,
-                              inclusive_end=True),
-                float, (-3.49, 0.0, 3.49))
+                        Float % Range(-3.5, 3.5, inclusive_start=False,
+                                      inclusive_end=True), float,
+                        (-3.49, 0.0, 3.49))
 
 
 def nonull_powerset(iterable):
@@ -289,13 +293,13 @@ def string_params():
 
 def bool_params():
     yield ParamTemplate('boolean',
-                Bool, bool, (True, False))
+                        Bool, bool, (True, False))
     yield ParamTemplate('boolean_true',
-                Bool % Choices(True), bool, (True,))
+                        Bool % Choices(True), bool, (True,))
     yield ParamTemplate('boolean_false',
-                Bool % Choices(False), bool, (False,))
+                        Bool % Choices(False), bool, (False,))
     yield ParamTemplate('boolean_choice',
-                Bool % Choices(True, False), bool, (True, False))
+                        Bool % Choices(True, False), bool, (True, False))
 
 
 def primitive_unions():
@@ -305,11 +309,12 @@ def primitive_unions():
                         Int % Range(1, None) | Str % Choices('auto'),
                         object, (1, 10, 'auto'))
     yield ParamTemplate('kitchen_sink',
-                        Float % Range(0, 1) | Int | Str % Choices('auto', 'Beef') | Bool | Float % Range(10, 11),
-                        object, (0.5, 1000, 'Beef', 'auto', True, False, 10.103))
+                        (Float % Range(0, 1) | Int |
+                         Str % Choices('auto', 'Beef') | Bool |
+                         Float % Range(10, 11)),
+                        object, (0.5, 1000, 'Beef', 'auto', True, False,
+                                 10.103))
 
-
-                        #Int % Range(-2, 9) | Str % Choices('auto', 'Beef') | Bool | Int % Range(50, None) | Float % Range(10, 11),
 
 def register_single_type_tests(plugin, list_of_params):
     for generator in list_of_params:
@@ -384,7 +389,6 @@ def register_single_type_tests(plugin, list_of_params):
                 {k: param for k in chain([param.base_name], defaults)},
                 {param.base_name: arg, **defaults}, qiime_outputs)
 
-
             plugin.methods.register_function(
                 function=func,
                 inputs=qiime_inputs,
@@ -397,7 +401,6 @@ def register_single_type_tests(plugin, list_of_params):
                 description=LOREM_IPSUM,
                 examples=usage_examples
             )
-
 
 
 # TODO: will this be dead code soon?

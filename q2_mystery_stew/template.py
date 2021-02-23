@@ -9,7 +9,6 @@ import json
 from inspect import Signature, Parameter
 
 import qiime2
-from qiime2.plugin import TextFileFormat
 
 from q2_mystery_stew.templatable_echo_fmt import EchoOutputFmt
 from q2_mystery_stew.format import SingleIntFormat
