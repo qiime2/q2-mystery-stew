@@ -8,6 +8,7 @@
 import json
 from inspect import Signature, Parameter
 
+import qiime2
 from qiime2.plugin import TextFileFormat
 
 from q2_mystery_stew.templatable_echo_fmt import EchoOutputFmt
@@ -55,6 +56,11 @@ def argument_to_line(name, arg):
     value = arg
     if isinstance(arg, SingleIntFormat):
         value = arg.get_int()
+    elif isinstance(arg, qiime2.Metadata):
+        value = arg.to_dataframe().to_json()
+    elif isinstance(arg, (qiime2.CategoricalMetadataColumn,
+                          qiime2.NumericMetadataColumn)):
+        value = arg.to_series().to_json()
     elif type(arg) is set:
         value = list(arg)
 
