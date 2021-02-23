@@ -94,9 +94,11 @@ def create_plugin(**filters):
     for key, generator in basics.items():
         if not filters or filters.get(key, False):
             selected_types.append(generator())
-            if not filters or filters.get('collections', False):
-                selected_types.append(list_params(generator()))
-                selected_types.append(set_params(generator()))
+            # TODO: update for collections
+            # if not filters or filters.get('collections', False):
+            #     if key != 'metadata':
+            #         selected_types.append(list_params(generator()))
+            #         selected_types.append(set_params(generator()))
 
     if not selected_types:
         raise ValueError("Must select at least one parameter type to use")
