@@ -51,8 +51,12 @@ def disguise_function(function, name, parameters, num_outputs):
     function.__name__ = name
 
 
+# TODO: If we see a set of semantic types, we want to make sure we output it as a list
+# If we have a list sort on repr of items
 def argument_to_line(name, arg):
     value = arg
+    expected_type = type(arg).__name__
+
     if isinstance(arg, SingleIntFormat):
         value = arg.get_int()
     elif isinstance(arg, qiime2.Metadata):
@@ -60,10 +64,18 @@ def argument_to_line(name, arg):
     elif isinstance(arg, (qiime2.CategoricalMetadataColumn,
                           qiime2.NumericMetadataColumn)):
         value = arg.to_series().to_json()
-    elif type(arg) is set:
-        value = list(arg)
 
-    return json.dumps([name, value, type(arg).__name__]) + '\n'
+    if type(arg) is list or type(arg) is set:
+        temp = []
+        for i in value:
+            if isinstance(i, SingleIntFormat):
+                temp.append(i.get_int())
+                expected_type = 'list'
+            else:
+                temp.append(i)
+        value = sorted(temp, key=repr)
+
+    return json.dumps([name, value, expected_type]) + '\n'
 
 
 def write_output(**kwargs):

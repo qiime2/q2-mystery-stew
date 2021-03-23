@@ -16,7 +16,7 @@ import qiime2
 from qiime2.core.type.util import is_metadata_column_type, is_metadata_type
 from qiime2.plugin import (Plugin, Int, Range, Float, Bool, Str, Choices,
                            List, Set, Metadata, MetadataColumn, Categorical)
-from qiime2.sdk.util import is_semantic_type
+from qiime2.sdk.util import is_semantic_type, is_collection_type
 
 import q2_mystery_stew
 from .type import (SingleInt1, SingleInt2, IntWrapper,
@@ -95,10 +95,10 @@ def create_plugin(**filters):
         if not filters or filters.get(key, False):
             selected_types.append(generator())
             # TODO: update for collections
-            # if not filters or filters.get('collections', False):
-            #     if key != 'metadata':
-            #         selected_types.append(list_params(generator()))
-            #         selected_types.append(set_params(generator()))
+            if not filters or filters.get('collections', False):
+                if key != 'metadata':
+                    selected_types.append(list_params(generator()))
+                    selected_types.append(set_params(generator()))
 
     if not selected_types:
         raise ValueError("Must select at least one parameter type to use")
@@ -129,11 +129,32 @@ class UsageInstantiator:
             if argument is None:
                 inputs[name] = transformed_inputs[name] = None
             elif is_semantic_type(template.qiime_type):
-                inputs[name] = use.init_data(argument.__name__, argument)
-                artifact = argument()
-                view = artifact.view(template.view_type)
-                view.__hide_from_garbage_collector = artifact
-                transformed_inputs[name] = view
+                if type(argument) == list:
+                    input_temp = []
+                    transformed_inputs[name] = []
+                    for arg in argument:
+                        input_temp.append(use.init_data(arg.__name__, arg))
+                        artifact = arg()
+                        view = artifact.view(template.view_type)
+                        view.__hide_from_garbage_collector = artifact
+                        transformed_inputs[name].append(view)
+                    inputs[name] = use.init_data_collection(name, list, *input_temp)
+                elif type(argument) == set:
+                    input_temp = []
+                    transformed_inputs[name] = set()
+                    for arg in argument:
+                        input_temp.append(use.init_data(arg.__name__, arg))
+                        artifact = arg()
+                        view = artifact.view(template.view_type)
+                        view.__hide_from_garbage_collector = artifact
+                        transformed_inputs[name].add(view)
+                    inputs[name] = use.init_data_collection(name, set, *input_temp)
+                else:
+                    inputs[name] = use.init_data(argument.__name__, argument)
+                    artifact = argument()
+                    view = artifact.view(template.view_type)
+                    view.__hide_from_garbage_collector = artifact
+                    transformed_inputs[name] = view
             elif is_metadata_type(template.qiime_type):
                 if is_metadata_column_type(template.qiime_type):
                     factory, column_name = argument
@@ -268,21 +289,27 @@ def nonull_powerset(iterable):
 
 
 def list_params(generator):
-    for param in generator:
-        yield ParamTemplate(
-            param.base_name + "_list",
-            List[param.qiime_type],
-            param.view_type,
-            tuple(list(x) for x in nonull_powerset(param.domain)))
+    def make_list():
+        for param in generator:
+            yield ParamTemplate(
+                param.base_name + "_list",
+                List[param.qiime_type],
+                param.view_type,
+                tuple(list(x) for x in nonull_powerset(param.domain)))
+    make_list.__name__ = 'list_' + generator.__name__
+    return make_list()
 
 
 def set_params(generator):
-    for param in generator:
-        yield ParamTemplate(
-            param.base_name + "_set",
-            Set[param.qiime_type],
-            param.view_type,
-            tuple(set(x) for x in nonull_powerset(param.domain)))
+    def make_set():
+        for param in generator:
+            yield ParamTemplate(
+                param.base_name + "_set",
+                Set[param.qiime_type],
+                param.view_type,
+                tuple(set(x) for x in nonull_powerset(param.domain)))
+    make_set.__name__ = 'set_' + generator.__name__
+    return make_set()
 
 
 def string_params():
@@ -403,55 +430,6 @@ def register_single_type_tests(plugin, list_of_params):
                 description=LOREM_IPSUM,
                 examples=usage_examples
             )
-
-
-# TODO: will this be dead code soon?
-def register_tests(plugin, selected_params, signature_size, max_params=None,
-                   max_examples=None):
-    for idx, params in enumerate(
-            reservoir_sampler(combinations(selected_params, signature_size),
-                              n=max_params)):
-        action_name = f'func_{signature_size}params_{idx}'
-        param_annotations = \
-            {param.base_name + '_' + str(i): param.view_type for i,
-             param in enumerate(params)}
-        qiime_annotations = \
-            {param.base_name + '_' + str(i): param.qiime_type for i,
-             param in enumerate(params)}
-        func = function_template_1output
-
-        param_templates = {
-            param.base_name + f'_{i}': param for i, param in enumerate(params)}
-
-        args = reservoir_sampler(product(*[param.domain for param in params]),
-                                 n=max_examples)
-        rewrite_function_signature(func, {}, param_annotations, 1, action_name)
-        outputs = [('only_output', EchoOutput)]
-
-        usage_examples = {}
-        for i, arg in enumerate(args):
-            example_arguments = {
-                name: binding for name, binding in zip(param_templates, arg)}
-            usage_examples[f'example_{i}'] = UsageInstantiator(
-                action_name, param_templates, example_arguments, outputs)
-
-        qiime_inputs = {}
-        qiime_parameters = {}
-        for name, val in qiime_annotations.items():
-            if is_semantic_type(val):
-                qiime_inputs[name] = val
-            else:
-                qiime_parameters[name] = val
-
-        plugin.methods.register_function(
-            function=func,
-            inputs=qiime_inputs,
-            parameters=qiime_parameters,
-            outputs=outputs,
-            name=f'Short desc: {action_name}',
-            description=f'Long desc: {action_name}',
-            examples=usage_examples
-        )
 
 
 LOREM_IPSUM = """
