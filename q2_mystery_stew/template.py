@@ -64,6 +64,7 @@ def argument_to_line(name, arg):
         value = arg.to_series().to_json()
 
     # We need a list so we can jsonize it (cannot jsonize sets)
+    sort = False
     if type(arg) is list or type(arg) is set:
         temp = []
         for i in value:
@@ -72,11 +73,12 @@ def argument_to_line(name, arg):
             if isinstance(i, SingleIntFormat):
                 temp.append(i.get_int())
                 expected_type = 'list'
+                sort = True
             else:
                 temp.append(i)
         # If we turned a set into a list for json purposes, we need to sort it
         # to ensure it is always in the same order
-        if type(arg) is set or expected_type == 'list':
+        if type(arg) is set or sort:
             value = sorted(temp, key=repr)
         else:
             value = temp
