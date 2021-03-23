@@ -51,8 +51,6 @@ def disguise_function(function, name, parameters, num_outputs):
     function.__name__ = name
 
 
-# TODO: If we see a set of semantic types, we want to make sure we output it as
-# a list. If we have a list sort on repr of items
 def argument_to_line(name, arg):
     value = arg
     expected_type = type(arg).__name__
