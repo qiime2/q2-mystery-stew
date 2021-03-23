@@ -5,7 +5,7 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-from itertools import product, chain, combinations
+from itertools import chain, combinations
 from collections import namedtuple, deque
 import re
 from inspect import Parameter
@@ -16,15 +16,13 @@ import qiime2
 from qiime2.core.type.util import is_metadata_column_type, is_metadata_type
 from qiime2.plugin import (Plugin, Int, Range, Float, Bool, Str, Choices,
                            List, Set, Metadata, MetadataColumn, Categorical)
-from qiime2.sdk.util import is_semantic_type, is_collection_type
+from qiime2.sdk.util import is_semantic_type
 
 import q2_mystery_stew
 from .type import (SingleInt1, SingleInt2, IntWrapper,
                    WrappedInt1, WrappedInt2)
 from .format import SingleIntFormat, SingleIntDirectoryFormat
-from .util import reservoir_sampler
-from q2_mystery_stew.template import (rewrite_function_signature,
-                                      function_template_1output,
+from q2_mystery_stew.template import (function_template_1output,
                                       function_template_2output,
                                       function_template_3output,
                                       argument_to_line, disguise_function)
@@ -138,7 +136,8 @@ class UsageInstantiator:
                         view = artifact.view(template.view_type)
                         view.__hide_from_garbage_collector = artifact
                         transformed_inputs[name].append(view)
-                    inputs[name] = use.init_data_collection(name, list, *input_temp)
+                    inputs[name] = use.init_data_collection(name, list,
+                                                            *input_temp)
                 elif type(argument) == set:
                     input_temp = []
                     transformed_inputs[name] = set()
@@ -148,7 +147,8 @@ class UsageInstantiator:
                         view = artifact.view(template.view_type)
                         view.__hide_from_garbage_collector = artifact
                         transformed_inputs[name].add(view)
-                    inputs[name] = use.init_data_collection(name, set, *input_temp)
+                    inputs[name] = use.init_data_collection(name, set,
+                                                            *input_temp)
                 else:
                     inputs[name] = use.init_data(argument.__name__, argument)
                     artifact = argument()
