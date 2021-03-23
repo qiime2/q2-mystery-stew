@@ -63,15 +63,23 @@ def argument_to_line(name, arg):
                           qiime2.NumericMetadataColumn)):
         value = arg.to_series().to_json()
 
+    # We need a list so we can jsonize it (cannot jsonize sets)
     if type(arg) is list or type(arg) is set:
         temp = []
         for i in value:
+            # If we are given a set of artifacts it will be turned into a list
+            # by the framework, so we need to be ready to accept a list
             if isinstance(i, SingleIntFormat):
                 temp.append(i.get_int())
                 expected_type = 'list'
             else:
                 temp.append(i)
-        value = sorted(temp, key=repr)
+        # If we turned a set into a list for json purposes, we need to sort it
+        # to ensure it is always in the same order
+        if type(arg) is set or expected_type == 'list':
+            value = sorted(temp, key=repr)
+        else:
+            value = temp
 
     return json.dumps([name, value, expected_type]) + '\n'
 
