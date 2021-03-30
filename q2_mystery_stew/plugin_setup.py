@@ -92,7 +92,6 @@ def create_plugin(**filters):
     for key, generator in basics.items():
         if not filters or filters.get(key, False):
             selected_types.append(generator())
-            # TODO: update for collections
             if not filters or filters.get('collections', False):
                 if key != 'metadata':
                     selected_types.append(list_params(generator()))
@@ -127,28 +126,24 @@ class UsageInstantiator:
             if argument is None:
                 inputs[name] = transformed_inputs[name] = None
             elif is_semantic_type(template.qiime_type):
-                if type(argument) == list:
+                if type(argument) == list or type(argument) == set:
+                    collection_type = type(argument)
                     input_temp = []
-                    transformed_inputs[name] = []
+                    transformed_inputs[name] = collection_type()
+
                     for arg in argument:
                         input_temp.append(use.init_data(arg.__name__, arg))
                         artifact = arg()
                         view = artifact.view(template.view_type)
                         view.__hide_from_garbage_collector = artifact
-                        transformed_inputs[name].append(view)
-                    inputs[name] = use.init_data_collection(name, list,
-                                                            *input_temp)
-                elif type(argument) == set:
-                    input_temp = []
-                    transformed_inputs[name] = set()
-                    for arg in argument:
-                        input_temp.append(use.init_data(arg.__name__, arg))
-                        artifact = arg()
-                        view = artifact.view(template.view_type)
-                        view.__hide_from_garbage_collector = artifact
-                        transformed_inputs[name].add(view)
-                    inputs[name] = use.init_data_collection(name, set,
-                                                            *input_temp)
+
+                        if collection_type == list:
+                            transformed_inputs[name].append(view)
+                        elif collection_type == set:
+                            transformed_inputs[name].add(view)
+                        inputs[name] = \
+                            use.init_data_collection(name, collection_type,
+                                                     *input_temp)
                 else:
                     inputs[name] = use.init_data(argument.__name__, argument)
                     artifact = argument()
