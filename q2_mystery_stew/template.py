@@ -53,6 +53,8 @@ def disguise_function(function, name, parameters, num_outputs):
 
 def argument_to_line(name, arg):
     value = arg
+    expected_type = type(arg).__name__
+
     if isinstance(arg, SingleIntFormat):
         value = arg.get_int()
     elif isinstance(arg, qiime2.Metadata):
@@ -60,10 +62,28 @@ def argument_to_line(name, arg):
     elif isinstance(arg, (qiime2.CategoricalMetadataColumn,
                           qiime2.NumericMetadataColumn)):
         value = arg.to_series().to_json()
-    elif type(arg) is set:
-        value = list(arg)
 
-    return json.dumps([name, value, type(arg).__name__]) + '\n'
+    # We need a list so we can jsonize it (cannot jsonize sets)
+    sort = False
+    if type(arg) is list or type(arg) is set:
+        temp = []
+        for i in value:
+            # If we are given a set of artifacts it will be turned into a list
+            # by the framework, so we need to be ready to accept a list
+            if isinstance(i, SingleIntFormat):
+                temp.append(i.get_int())
+                expected_type = 'list'
+                sort = True
+            else:
+                temp.append(i)
+        # If we turned a set into a list for json purposes, we need to sort it
+        # to ensure it is always in the same order
+        if type(arg) is set or sort:
+            value = sorted(temp, key=repr)
+        else:
+            value = temp
+
+    return json.dumps([name, value, expected_type]) + '\n'
 
 
 def write_output(**kwargs):
