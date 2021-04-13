@@ -277,10 +277,17 @@ def float_params():
                         (-3.49, 0.0, 3.49))
 
 
-def nonull_powerset(iterable):
-    "powerset([1,2,3]) --> (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
-    s = list(iterable)
-    return chain.from_iterable(combinations(s, r) for r in range(1, len(s)+1))
+def underpowered_set(iterable):
+    """k of 1-tuple, 2 of 2-tuple, and a single k-tuple"""
+    tuplek = tuple(iterable)
+    pairs2 = combinations(tuplek, 2)
+
+    for tuple1 in tuplek:
+        yield (tuple1,)
+    for tuple2, _ in zip(pairs2, range(2)):
+        yield tuple2
+
+    yield tuplek
 
 
 def list_params(generator):
@@ -290,7 +297,7 @@ def list_params(generator):
                 param.base_name + "_list",
                 List[param.qiime_type],
                 param.view_type,
-                tuple(list(x) for x in nonull_powerset(param.domain)))
+                tuple(list(x) for x in underpowered_set(param.domain)))
     make_list.__name__ = 'list_' + generator.__name__
     return make_list()
 
@@ -302,7 +309,7 @@ def set_params(generator):
                 param.base_name + "_set",
                 Set[param.qiime_type],
                 param.view_type,
-                tuple(set(x) for x in nonull_powerset(param.domain)))
+                tuple(set(x) for x in underpowered_set(param.domain)))
     make_set.__name__ = 'set_' + generator.__name__
     return make_set()
 
