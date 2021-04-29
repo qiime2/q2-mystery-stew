@@ -51,5 +51,5 @@ jobs:
       with:
         package-name: q2-mystery-stew
         build-target: tested
-        additional-tests: py.test --pyargs q2_mystery_stew
+        # additional-tests: py.test --pyargs q2_mystery_stew
         library-token: ${{ secrets.LIBRARY_TOKEN }}
