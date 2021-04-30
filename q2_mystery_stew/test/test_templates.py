@@ -34,4 +34,6 @@ def _labeler(val):
 def test_case(action, example):
     example_f = action.examples[example]
     use = usage.ExecutionUsage()
+    use_async = usage.ExecutionUsage(asynchronous=True)
     example_f(use)
+    example_f(use_async)
