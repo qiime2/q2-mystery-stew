@@ -398,7 +398,7 @@ def register_single_type_tests(plugin, list_of_params):
                     qiime_annotations[param_name] = param.qiime_type
                     defaults[param_name] = default
 
-            func = function_template_1output
+            func = function_template_1output()
             disguise_function(func, action_id, function_parameters, 1)
 
             qiime_inputs = {}

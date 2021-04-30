@@ -95,31 +95,37 @@ def write_output(**kwargs):
     return output
 
 
-def function_template_1output(**kwargs):
-    output = write_output(**kwargs)
+def function_template_1output():
+    def inner_function_template_1output(**kwargs):
+        output = write_output(**kwargs)
 
-    return output
-
-
-def function_template_2output(**kwargs):
-    output = write_output(**kwargs)
-    output2 = EchoOutputFmt()
-
-    with output2.open() as fh:
-        fh.write('2')
-
-    return output, output2
+        return output
+    return inner_function_template_1output
 
 
-def function_template_3output(**kwargs):
-    output = write_output(**kwargs)
-    output2 = EchoOutputFmt()
-    output3 = EchoOutputFmt()
+def function_template_2output():
+    def inner_function_template_2output(**kwargs):
+        output = write_output(**kwargs)
+        output2 = EchoOutputFmt()
 
-    with output2.open() as fh:
-        fh.write('2')
+        with output2.open() as fh:
+            fh.write('2')
 
-    with output3.open() as fh:
-        fh.write('3')
+        return output, output2
+    return inner_function_template_2output
 
-    return output, output2, output3
+
+def function_template_3output():
+    def inner_function_template_3output(**kwargs):
+        output = write_output(**kwargs)
+        output2 = EchoOutputFmt()
+        output3 = EchoOutputFmt()
+
+        with output2.open() as fh:
+            fh.write('2')
+
+        with output3.open() as fh:
+            fh.write('3')
+
+        return output, output2, output3
+    return inner_function_template_3output
