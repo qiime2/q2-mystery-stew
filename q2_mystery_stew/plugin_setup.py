@@ -15,7 +15,8 @@ import pandas as pd
 import qiime2
 from qiime2.core.type.util import is_metadata_column_type, is_metadata_type
 from qiime2.plugin import (Plugin, Int, Range, Float, Bool, Str, Choices,
-                           List, Set, Metadata, MetadataColumn, Categorical)
+                           List, Set, Metadata, MetadataColumn, Categorical,
+                           TypeMap)
 from qiime2.sdk.util import is_semantic_type
 
 import q2_mystery_stew
@@ -97,10 +98,12 @@ def create_plugin(**filters):
                     selected_types.append(list_params(generator()))
                     selected_types.append(set_params(generator()))
 
-    if not selected_types:
-        raise ValueError("Must select at least one parameter type to use")
-
     register_single_type_tests(plugin, selected_types)
+    if not filters or filters.get('typemaps', False):
+        register_typemap_tests(plugin)
+
+    if not selected_types and not filters.get('typemaps', False):
+        raise ValueError("Must select at least one parameter type to use")
 
     return plugin
 
@@ -449,6 +452,30 @@ def register_single_type_tests(plugin, list_of_params):
                 description=LOREM_IPSUM,
                 examples=usage_examples
             )
+
+
+def register_typemap_tests(plugin):
+    input_map, output_map = \
+        TypeMap({SingleInt1: EchoOutput,
+                 List[SingleInt1 | SingleInt2] | List[SingleInt1]: EchoOutput})
+    params = [Parameter('typemap', Parameter.POSITIONAL_OR_KEYWORD,
+              annotation=TypeMap, default=None)]
+
+    func = function_template_1output
+    disguise_function(func, 'typemap', params, 1)
+
+    plugin.methods.register_function(
+        function=func,
+        inputs={'typemap': input_map},
+        parameters=[],
+        outputs=[('output', output_map)],
+        input_descriptions={},
+        parameter_descriptions={},
+        output_descriptions={},
+        name='typemap_test',
+        description=LOREM_IPSUM,
+        examples=[]
+    )
 
 
 LOREM_IPSUM = """
