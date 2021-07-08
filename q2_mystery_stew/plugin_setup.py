@@ -464,10 +464,12 @@ def register_typemap_tests(plugin):
     func = function_template_1output
     disguise_function(func, 'typemap_test', params, 1)
     usage_examples = \
-        {'example_1': UsageInstantiator('typemap_test',
-        {'typemap': ParamTemplate('test', input_map, SingleIntFormat, (single_int1_1))},
-        {'typemap': [single_int1_1]},
-        [('output', output_map)])}
+        {'example_1': UsageInstantiator(
+            'typemap_test',
+            {'typemap': ParamTemplate('test', input_map, SingleIntFormat,
+                                      (single_int1_1))},
+            {'typemap': [single_int1_1]},
+            [('output', output_map)])}
 
     plugin.methods.register_function(
         function=func,
