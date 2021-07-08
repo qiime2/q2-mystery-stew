@@ -81,13 +81,13 @@ def create_plugin(**filters):
 
     selected_types = []
     basics = {
-        'ints': int_params,
-        'floats': float_params,
-        'strings': string_params,
-        'bools': bool_params,
-        'metadata': simple_metadata,
-        'primitive_unions': primitive_unions,
-        'artifacts': artifact_params
+        # 'ints': int_params,
+        # 'floats': float_params,
+        # 'strings': string_params,
+        # 'bools': bool_params,
+        # 'metadata': simple_metadata,
+        # 'primitive_unions': primitive_unions,
+        # 'artifacts': artifact_params
     }
 
     for key, generator in basics.items():
@@ -102,8 +102,8 @@ def create_plugin(**filters):
     if not filters or filters.get('typemaps', False):
         register_typemap_tests(plugin)
 
-    if not selected_types and not filters.get('typemaps', False):
-        raise ValueError("Must select at least one parameter type to use")
+    # if not selected_types and not filters.get('typemaps', False):
+    #     raise ValueError("Must select at least one parameter type to use")
 
     return plugin
 
@@ -457,12 +457,17 @@ def register_single_type_tests(plugin, list_of_params):
 def register_typemap_tests(plugin):
     input_map, output_map = \
         TypeMap({SingleInt1: EchoOutput,
-                 List[SingleInt1 | SingleInt2] | List[SingleInt1]: EchoOutput})
+                 List[SingleInt1 | SingleInt2]: EchoOutput})
     params = [Parameter('typemap', Parameter.POSITIONAL_OR_KEYWORD,
-              annotation=TypeMap, default=None)]
+              annotation=SingleIntFormat, default=None)]
 
     func = function_template_1output
-    disguise_function(func, 'typemap', params, 1)
+    disguise_function(func, 'typemap_test', params, 1)
+    usage_examples = \
+        {'example_1': UsageInstantiator('typemap_test',
+        {'typemap': ParamTemplate('test', input_map, SingleIntFormat, (single_int1_1))},
+        {'typemap': [single_int1_1]},
+        [('output', output_map)])}
 
     plugin.methods.register_function(
         function=func,
@@ -474,7 +479,7 @@ def register_typemap_tests(plugin):
         output_descriptions={},
         name='typemap_test',
         description=LOREM_IPSUM,
-        examples=[]
+        examples=usage_examples
     )
 
 
