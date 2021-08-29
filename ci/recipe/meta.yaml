@@ -17,8 +17,8 @@ requirements:
     - setuptools
 
   run:
-    - python  {{ python }}
-    - qiime2 {{ release }}.*
+    - python {{ python }}
+    - qiime2 {{ qiime2 }}
 
 test:
   imports:
