@@ -6,16 +6,14 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import qiime2.plugin as plugin
+from qiime2.plugin import SemanticType
 
-SingleInt1 = plugin.SemanticType('SingleInt1')
-SingleInt2 = plugin.SemanticType('SingleInt2')
+EchoOutput = SemanticType('EchoOutput')
+SingleInt1 = SemanticType('SingleInt1')
+SingleInt2 = SemanticType('SingleInt2')
 
-IntWrapper = plugin.SemanticType('IntWrapper', field_names='first')
+IntWrapper = SemanticType('IntWrapper', field_names='first')
+_variant = IntWrapper.field['first']
 
-_variants = [
-    IntWrapper.field['first'],
-]
-
-WrappedInt1 = plugin.SemanticType('WrappedInt1', variant_of=_variants)
-WrappedInt2 = plugin.SemanticType('WrappedInt2', variant_of=_variants)
+WrappedInt1 = SemanticType('WrappedInt1', variant_of=_variant)
+WrappedInt2 = SemanticType('WrappedInt2', variant_of=_variant)
