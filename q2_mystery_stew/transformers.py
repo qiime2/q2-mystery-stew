@@ -5,15 +5,12 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-from qiime2.plugin import SemanticType, model
 
-EchoOutput = SemanticType('EchoOutput')
-
-
-class EchoOutputFmt(model.TextFileFormat):
-    def validate(self, *args):
-        pass
+from q2_mystery_stew.format import SingleIntFormat
 
 
-EchoOutputDirFmt = model.SingleFileDirectoryFormat('EchoOutputDirFmt',
-                                                   'echo.txt', EchoOutputFmt)
+def to_single_int_format(data: int) -> SingleIntFormat:
+    ff = SingleIntFormat()
+    with ff.open() as fh:
+        fh.write('%d\n' % data)
+    return ff

@@ -5,38 +5,24 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
-from itertools import chain, combinations
-from collections import namedtuple, deque
-import re
+
 from inspect import Parameter
+from itertools import chain
+from collections import deque
 
-import pandas as pd
-
-import qiime2
-from qiime2.core.type.util import is_metadata_column_type, is_metadata_type
-from qiime2.plugin import (Plugin, Int, Range, Float, Bool, Str, Choices,
-                           List, Set, Metadata, MetadataColumn, Categorical)
-from qiime2.sdk.util import is_semantic_type
+from qiime2.plugin import Plugin
+from qiime2.sdk.util import is_metadata_type, is_semantic_type
 
 import q2_mystery_stew
-from .type import (SingleInt1, SingleInt2, IntWrapper,
-                   WrappedInt1, WrappedInt2)
-from .format import SingleIntFormat, SingleIntDirectoryFormat
+from q2_mystery_stew.type import (EchoOutput, SingleInt1, SingleInt2,
+                                  IntWrapper, WrappedInt1, WrappedInt2)
+from q2_mystery_stew.usage import UsageInstantiator
+from q2_mystery_stew.format import (SingleIntFormat, SingleIntDirectoryFormat,
+                                    EchoOutputFmt, EchoOutputDirFmt)
 from q2_mystery_stew.template import (function_template_1output,
-                                      function_template_2output,
-                                      function_template_3output,
-                                      argument_to_line, disguise_function)
-from q2_mystery_stew.templatable_echo_fmt import (EchoOutput, EchoOutputFmt,
-                                                  EchoOutputDirFmt)
-
-
-ParamTemplate = namedtuple('ParamTemplate', ['base_name', 'qiime_type',
-                                             'view_type', 'domain'])
-
-
-function_templates = (function_template_1output,
-                      function_template_2output,
-                      function_template_3output)
+                                      disguise_function)
+from q2_mystery_stew.generators import get_param_generators
+from q2_mystery_stew.transformers import to_single_int_format
 
 
 def create_plugin(**filters):
@@ -52,6 +38,15 @@ def create_plugin(**filters):
                                  'actions.'
              )
 
+    register_base_implementation(plugin)
+
+    selected_types = get_param_generators(**filters)
+    register_single_type_tests(plugin, selected_types)
+
+    return plugin
+
+
+def register_base_implementation(plugin):
     plugin.register_semantic_types(SingleInt1, SingleInt2, IntWrapper,
                                    WrappedInt1, WrappedInt2, EchoOutput)
 
@@ -62,306 +57,12 @@ def create_plugin(**filters):
                                             SingleIntDirectoryFormat)
     plugin.register_semantic_type_to_format(SingleInt2,
                                             SingleIntDirectoryFormat)
-
     plugin.register_semantic_type_to_format(
         IntWrapper[WrappedInt1 | WrappedInt2], SingleIntDirectoryFormat)
 
     plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
 
-    # This transformer is being registered in this file right now because it is
-    # needed by the registration functions so it needs to be registered before
-    # it is called
-    @plugin.register_transformer
-    def _0(data: int) -> SingleIntFormat:
-        ff = SingleIntFormat()
-        with ff.open() as fh:
-            fh.write('%d\n' % data)
-        return ff
-
-    selected_types = []
-    basics = {
-        'ints': int_params,
-        'floats': float_params,
-        'strings': string_params,
-        'bools': bool_params,
-        'metadata': simple_metadata,
-        'primitive_unions': primitive_unions,
-        'artifacts': artifact_params
-    }
-
-    for key, generator in basics.items():
-        if not filters or filters.get(key, False):
-            selected_types.append(generator())
-            if not filters or filters.get('collections', False):
-                if key != 'metadata':
-                    selected_types.append(list_params(generator()))
-                    selected_types.append(set_params(generator()))
-
-    if not selected_types:
-        raise ValueError("Must select at least one parameter type to use")
-
-    register_single_type_tests(plugin, selected_types)
-
-    return plugin
-
-
-class UsageInstantiator:
-    def __init__(self, name, param_templates, inputs, outputs, defaults=None):
-        self.name = name
-        self.param_templates = param_templates
-        self.inputs = inputs
-        self.outputs = outputs
-        if defaults is None:
-            defaults = {}
-        self.defaults = defaults
-        self.output_names = {k: k for k, _ in self.outputs}
-
-    def __call__(self, use):
-        inputs = {}
-        transformed_inputs = {}
-
-        for name, argument in self.inputs.items():
-            template = self.param_templates[name]
-
-            if argument is None:
-                inputs[name] = transformed_inputs[name] = None
-            elif is_semantic_type(template.qiime_type):
-                if type(argument) == list or type(argument) == set:
-                    collection_type = type(argument)
-                    input_temp = []
-                    transformed_inputs[name] = collection_type()
-
-                    for arg in argument:
-                        input_temp.append(use.init_data(arg.__name__, arg))
-                        artifact = arg()
-                        view = artifact.view(template.view_type)
-                        view.__hide_from_garbage_collector = artifact
-
-                        if collection_type == list:
-                            transformed_inputs[name].append(view)
-                        elif collection_type == set:
-                            transformed_inputs[name].add(view)
-                        inputs[name] = \
-                            use.init_data_collection(name, collection_type,
-                                                     *input_temp)
-                else:
-                    inputs[name] = use.init_data(argument.__name__, argument)
-                    artifact = argument()
-                    view = artifact.view(template.view_type)
-                    view.__hide_from_garbage_collector = artifact
-                    transformed_inputs[name] = view
-            elif is_metadata_type(template.qiime_type):
-                if is_metadata_column_type(template.qiime_type):
-                    factory, column_name = argument
-                else:
-                    factory, column_name = argument, None
-
-                md_rec = use.init_metadata(factory.__name__, factory)
-                md = factory()
-
-                if column_name is None:
-                    inputs[name] = md_rec
-                    transformed_inputs[name] = md
-                else:
-                    inputs[name] = use.get_metadata_column(column_name, md_rec)
-                    transformed_inputs[name] = md.get_column(column_name)
-
-            else:
-                inputs[name] = transformed_inputs[name] = argument
-
-        use.action(
-            use.UsageAction(plugin_id='mystery_stew', action_id=self.name),
-            use.UsageInputs(**inputs),
-            use.UsageOutputNames(**self.output_names),
-        )
-
-        for idx, (output_name, expected_type) in enumerate(self.outputs):
-            self._assert_output(use, transformed_inputs, self.defaults,
-                                output_name, expected_type, idx)
-
-    @staticmethod
-    def _fmt_regex(name, arg):
-        line = argument_to_line(name, arg).strip()
-        return re.escape(line)
-
-    def _assert_output(self, use, inputs, defaults, output_name, expected_type,
-                       idx):
-        if idx == 0:
-            for input_name, input_arg in chain(inputs.items(),
-                                               defaults.items()):
-                regex = self._fmt_regex(input_name, input_arg)
-                output = use.get_result(output_name)
-                output.assert_has_line_matching(
-                    label='<generated>',
-                    path='echo.txt',
-                    expression=regex
-                )
-        else:
-            output = use.get_result(output_name)
-            output.assert_has_line_matching(
-                label='<generated>',
-                path='echo.txt',
-                expression=str(idx),
-            )
-
-
-def single_int1_1():
-    return qiime2.Artifact.import_data('SingleInt1', 42)
-
-
-def single_int1_2():
-    return qiime2.Artifact.import_data('SingleInt1', 43)
-
-
-def single_int1_3():
-    return qiime2.Artifact.import_data('SingleInt1', 44)
-
-
-def single_int2_1():
-    return qiime2.Artifact.import_data('SingleInt2', 2019)
-
-
-def single_int2_2():
-    return qiime2.Artifact.import_data('SingleInt2', 2020)
-
-
-def single_int2_3():
-    return qiime2.Artifact.import_data('SingleInt2', 2021)
-
-
-def artifact_params():
-    yield ParamTemplate('simple_type1', SingleInt1, SingleIntFormat,
-                        (single_int1_1, single_int1_2, single_int1_3))
-    yield ParamTemplate('simple_type2', SingleInt2, SingleIntFormat,
-                        (single_int2_1, single_int2_2, single_int2_3))
-    yield ParamTemplate('union_type', SingleInt1 | SingleInt2, SingleIntFormat,
-                        (single_int1_1, single_int2_1, single_int2_2,
-                         single_int1_3))
-
-
-def metadata1():
-    df = pd.DataFrame({'col1': ['a', 'b', 'c'], 'col2': ['x', 'y', 'z']},
-                      index=['id1', 'id2', 'id3'])
-    df.index.name = 'id'
-    return qiime2.Metadata(df)
-
-
-def simple_metadata():
-    yield ParamTemplate('metadata_cat', Metadata, qiime2.Metadata,
-                        (metadata1,))
-    yield ParamTemplate('column_cat', MetadataColumn[Categorical],
-                        qiime2.CategoricalMetadataColumn,
-                        ([metadata1, 'col1'], [metadata1, 'col2']))
-
-
-def int_params():
-    yield ParamTemplate('single_int', Int, int, (-1, 0, 1))
-    yield ParamTemplate('int_range_1_param', Int % Range(3), int, (-42, 0, 2))
-    yield ParamTemplate('int_range_1_param_i_e',
-                        Int % Range(3, inclusive_end=True), int, (-43, 0, 3))
-    yield ParamTemplate('int_range_2_params',
-                        Int % Range(-3, 4), int, (-3, 0, 3))
-    yield ParamTemplate('int_range_2_params_i_e',
-                        Int % Range(-3, 4, inclusive_end=True), int,
-                        (-3, 0, 4))
-    yield ParamTemplate('int_range_2_params_no_i',
-                        Int % Range(-3, 4, inclusive_start=False), int,
-                        (-2, 0, 3))
-    yield ParamTemplate('int_range_2_params_i_e_ex_s',
-                        Int % Range(-3, 4, inclusive_start=False,
-                                    inclusive_end=True),
-                        int, (-2, 0, 4))
-
-
-def float_params():
-    yield ParamTemplate('single_float', Float, float, (-1.5, 0.0, 1.5))
-    yield ParamTemplate('float_range_1_param', Float % Range(2.5), float,
-                        (-42.5, 0.0, 2.49))
-    yield ParamTemplate('float_range_1_param_i_e',
-                        Float % Range(2.5, inclusive_end=True), float,
-                        (-42.5, 0.0, 2.5))
-    yield ParamTemplate('float_range_2_params', Float % Range(-3.5, 3.5),
-                        float, (-3.5, 0.0, 3.49))
-    yield ParamTemplate('float_range_2_params_i_e',
-                        Float % Range(-3.5, 3.5, inclusive_end=True), float,
-                        (-3.5, 0.0, 3.5))
-    yield ParamTemplate('float_range_2_params_no_i',
-                        Float % Range(-3.5, 3.5, inclusive_start=False), float,
-                        (-3.49, 0.0, 3.49))
-    yield ParamTemplate('float_range_2_params_i_e_ex_s',
-                        Float % Range(-3.5, 3.5, inclusive_start=False,
-                                      inclusive_end=True), float,
-                        (-3.49, 0.0, 3.49))
-
-
-def underpowered_set(iterable):
-    """k of 1-tuple, 2 of 2-tuple, and a single k-tuple"""
-    tuplek = tuple(iterable)
-    pairs2 = combinations(tuplek, 2)
-
-    for tuple1 in tuplek:
-        yield (tuple1,)
-    for tuple2, _ in zip(pairs2, range(2)):
-        yield tuple2
-
-    yield tuplek
-
-
-def list_params(generator):
-    def make_list():
-        for param in generator:
-            yield ParamTemplate(
-                param.base_name + "_list",
-                List[param.qiime_type],
-                param.view_type,
-                tuple(list(x) for x in underpowered_set(param.domain)))
-    make_list.__name__ = 'list_' + generator.__name__
-    return make_list()
-
-
-def set_params(generator):
-    def make_set():
-        for param in generator:
-            yield ParamTemplate(
-                param.base_name + "_set",
-                Set[param.qiime_type],
-                param.view_type,
-                tuple(set(x) for x in underpowered_set(param.domain)))
-    make_set.__name__ = 'set_' + generator.__name__
-    return make_set()
-
-
-def string_params():
-    # TODO: should '' be in this list?
-    mean_choices = ('None', '-1', 'True', 'False', '<[^#^]>')
-    yield ParamTemplate('string', Str, str, mean_choices)
-    yield ParamTemplate('string_choices', Str % Choices(*mean_choices),
-                        str, mean_choices)
-
-
-def bool_params():
-    yield ParamTemplate('boolean',
-                        Bool, bool, (True, False))
-    yield ParamTemplate('boolean_true',
-                        Bool % Choices(True), bool, (True,))
-    yield ParamTemplate('boolean_false',
-                        Bool % Choices(False), bool, (False,))
-    yield ParamTemplate('boolean_choice',
-                        Bool % Choices(True, False), bool, (True, False))
-
-
-def primitive_unions():
-    yield ParamTemplate('disjoint', Int % (Range(5, 10) | Range(15, 20)),
-                        int, (5, 9, 15, 19))
-    yield ParamTemplate('auto_int',
-                        Int % Range(1, None) | Str % Choices('auto'),
-                        object, (1, 10, 'auto'))
-    yield ParamTemplate('kitchen_sink',
-                        (Float % Range(0, 1) | Int |
-                         Str % Choices('auto', 'Beef') | Bool |
-                         Float % Range(10, 11)),
-                        object, (0.5, 1000, 'Beef', 'auto', True, False,
-                                 10.103))
+    plugin.register_transformer(to_single_int_format)
 
 
 def register_single_type_tests(plugin, list_of_params):

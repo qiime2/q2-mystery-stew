@@ -6,35 +6,11 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import json
-from inspect import Signature, Parameter
+from inspect import Signature
 
 import qiime2
 
-from q2_mystery_stew.templatable_echo_fmt import EchoOutputFmt
-from q2_mystery_stew.format import SingleIntFormat
-
-
-# TODO: will this be dead code?
-def rewrite_function_signature(function, inputs, params, num_outputs, name):
-    output = tuple([EchoOutputFmt] * num_outputs)
-
-    input_params = [Parameter(name, Parameter.POSITIONAL_ONLY,
-                              annotation=type_)
-                    for name, type_ in inputs.items()]
-
-    input_params.extend([Parameter(name, Parameter.POSITIONAL_ONLY,
-                                   annotation=type_)
-                        for name, type_ in params.items()])
-
-    annotations = {}
-    annotations.update(inputs)
-    annotations.update(params)
-    annotations.update({'return': output})
-
-    function.__signature__ = \
-        Signature(input_params, return_annotation=output)
-    function.__annotations__ = annotations
-    function.__name__ = name
+from q2_mystery_stew.format import SingleIntFormat, EchoOutputFmt
 
 
 def disguise_function(function, name, parameters, num_outputs):
@@ -99,27 +75,3 @@ def function_template_1output(**kwargs):
     output = write_output(**kwargs)
 
     return output
-
-
-def function_template_2output(**kwargs):
-    output = write_output(**kwargs)
-    output2 = EchoOutputFmt()
-
-    with output2.open() as fh:
-        fh.write('2')
-
-    return output, output2
-
-
-def function_template_3output(**kwargs):
-    output = write_output(**kwargs)
-    output2 = EchoOutputFmt()
-    output3 = EchoOutputFmt()
-
-    with output2.open() as fh:
-        fh.write('2')
-
-    with output3.open() as fh:
-        fh.write('3')
-
-    return output, output2, output3

@@ -31,3 +31,12 @@ class SingleIntFormat(TextFileFormat):
 
 SingleIntDirectoryFormat = model.SingleFileDirectoryFormat(
     'SingleIntDirectoryFormat', 'int.txt', SingleIntFormat)
+
+
+class EchoOutputFmt(model.TextFileFormat):
+    def validate(self, *args):
+        pass
+
+
+EchoOutputDirFmt = model.SingleFileDirectoryFormat('EchoOutputDirFmt',
+                                                   'echo.txt', EchoOutputFmt)
