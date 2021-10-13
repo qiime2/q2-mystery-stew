@@ -5,6 +5,7 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+
 import json
 from inspect import Signature
 
@@ -13,7 +14,22 @@ import qiime2
 from q2_mystery_stew.format import SingleIntFormat, EchoOutputFmt
 
 
-def disguise_function(function, name, parameters, num_outputs):
+def get_disguised_echo_function(id, python_parameters, num_outputs):
+    TEMPLATES = [
+        _function_template_1output,
+        _function_template_2output,
+        _function_template_3output,
+        _function_template_4output,
+        _function_template_5output,
+    ]
+
+    function = TEMPLATES[num_outputs - 1]
+    disguise_echo_function(function, id, python_parameters, num_outputs)
+
+    return function
+
+
+def disguise_echo_function(function, name, parameters, num_outputs):
     if num_outputs == 1:
         outputs = EchoOutputFmt
     else:
@@ -62,16 +78,37 @@ def argument_to_line(name, arg):
     return json.dumps([name, value, expected_type]) + '\n'
 
 
-def write_output(**kwargs):
+def _echo_outputs(kwargs, num_outputs):
     output = EchoOutputFmt()
     with output.open() as fh:
         for name, arg in kwargs.items():
             fh.write(argument_to_line(name, arg))
 
+    if num_outputs > 1:
+        output = (output, *map(lambda x: EchoOutputFmt(),
+                               range(1, num_outputs)))
+        for idx, fmt in enumerate(output[1:], 2):
+            with fmt.open() as fh:
+                fh.write(str(idx))
+
     return output
 
 
-def function_template_1output(**kwargs):
-    output = write_output(**kwargs)
+def _function_template_1output(**kwargs):
+    return _echo_outputs(kwargs, 1)
 
-    return output
+
+def _function_template_2output(**kwargs):
+    return _echo_outputs(kwargs, 2)
+
+
+def _function_template_3output(**kwargs):
+    return _echo_outputs(kwargs, 3)
+
+
+def _function_template_4output(**kwargs):
+    return _echo_outputs(kwargs, 4)
+
+
+def _function_template_5output(**kwargs):
+    return _echo_outputs(kwargs, 5)

@@ -11,7 +11,8 @@ from .primitive import (int_params, float_params, string_params, bool_params,
 from .metadata import metadata_params
 from .artifacts import artifact_params
 from .collections import list_paramgen, set_paramgen
-from .base import ParamTemplate
+from .actions import generate_single_type_methods
+from .base import ParamTemplate, ActionTemplate, ParamSpec, Invocation
 
 
 BASIC_GENERATORS = {
@@ -53,5 +54,6 @@ def get_param_generators(**filters):
 
 __all__ = ['int_params', 'float_params', 'string_params', 'bool_params',
            'primitive_union_params', 'metadata_params', 'artifact_params',
-           'list_paramgen', 'set_paramgen', 'BASIC_GENERATORS', 'FILTERS',
-           'get_param_generators', 'ParamTemplate']
+           'list_paramgen', 'set_paramgen', 'generate_single_type_methods',
+           'BASIC_GENERATORS', 'FILTERS', 'get_param_generators',
+           'ParamTemplate', 'ParamSpec', 'ActionTemplate', 'Invocation']

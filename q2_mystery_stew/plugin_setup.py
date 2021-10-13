@@ -7,21 +7,21 @@
 # ----------------------------------------------------------------------------
 
 from inspect import Parameter
-from itertools import chain
-from collections import deque
 
 from qiime2.plugin import Plugin
-from qiime2.sdk.util import is_metadata_type, is_semantic_type
+from qiime2.sdk.util import is_semantic_type
 
 import q2_mystery_stew
 from q2_mystery_stew.type import (EchoOutput, SingleInt1, SingleInt2,
-                                  IntWrapper, WrappedInt1, WrappedInt2)
+                                  IntWrapper, WrappedInt1, WrappedInt2,
+                                  EchoOutputBranch1, EchoOutputBranch2,
+                                  EchoOutputBranch3)
 from q2_mystery_stew.usage import UsageInstantiator
 from q2_mystery_stew.format import (SingleIntFormat, SingleIntDirectoryFormat,
                                     EchoOutputFmt, EchoOutputDirFmt)
-from q2_mystery_stew.template import (function_template_1output,
-                                      disguise_function)
-from q2_mystery_stew.generators import get_param_generators
+from q2_mystery_stew.template import get_disguised_echo_function
+from q2_mystery_stew.generators import (
+        get_param_generators, generate_single_type_methods)
 from q2_mystery_stew.transformers import to_single_int_format
 
 
@@ -41,7 +41,9 @@ def create_plugin(**filters):
     register_base_implementation(plugin)
 
     selected_types = get_param_generators(**filters)
-    register_single_type_tests(plugin, selected_types)
+    for generator in selected_types:
+        for action_template in generate_single_type_methods(generator):
+            register_test_method(plugin, action_template)
 
     return plugin
 
@@ -60,96 +62,54 @@ def register_base_implementation(plugin):
     plugin.register_semantic_type_to_format(
         IntWrapper[WrappedInt1 | WrappedInt2], SingleIntDirectoryFormat)
 
-    plugin.register_semantic_type_to_format(EchoOutput, EchoOutputDirFmt)
+    plugin.register_semantic_type_to_format(
+        EchoOutput | EchoOutputBranch1 | EchoOutputBranch2 | EchoOutputBranch3,
+        EchoOutputDirFmt)
 
     plugin.register_transformer(to_single_int_format)
 
 
-def register_single_type_tests(plugin, list_of_params):
-    for generator in list_of_params:
-        for idx, param in enumerate(generator, 1):
-            action_id = f'test_{generator.__name__}_{idx}'
-            function_parameters = []
-            qiime_annotations = {}
-            defaults = {}
+def register_test_method(plugin, action_template):
+    qiime_inputs = {}
+    qiime_parameters = {}
+    qiime_outputs = action_template.registered_outputs
 
-            # Required
-            param_name = param.base_name
-            function_parameters.append(
-                Parameter(param_name, Parameter.POSITIONAL_OR_KEYWORD,
-                          annotation=param.view_type))
-            qiime_annotations[param_name] = param.qiime_type
+    python_parameters = []
+    for spec in action_template.parameter_specs.values():
+        print(spec.default)
+        python_parameters.append(Parameter(spec.name,
+                                           Parameter.POSITIONAL_OR_KEYWORD,
+                                           annotation=spec.view_type,
+                                           default=spec.default))
+        if is_semantic_type(spec.qiime_type):
+            qiime_inputs[spec.name] = spec.qiime_type
+        else:
+            qiime_parameters[spec.name] = spec.qiime_type
 
-            # Optional
-            param_name = f'optional_{param.base_name}'
-            function_parameters.append(
-                Parameter(param_name, Parameter.POSITIONAL_OR_KEYWORD,
-                          annotation=param.view_type, default=None))
-            qiime_annotations[param_name] = param.qiime_type
-            defaults[param_name] = None
+    function = get_disguised_echo_function(id=action_template.action_id,
+                                           python_parameters=python_parameters,
+                                           num_outputs=len(qiime_outputs))
+    usage_examples = {}
+    for idx, invocation in enumerate(action_template.invocation_domain):
+        usage_examples[f'example_{idx}'] = UsageInstantiator(
+            id=action_template.action_id,
+            parameter_specs=action_template.parameter_specs,
+            arguments=invocation.kwargs,
+            expected_outputs=invocation.expected_output_types
+        )
 
-            if (not is_semantic_type(param.qiime_type)
-                    and not is_metadata_type(param.qiime_type)):
-                # Defaults
-                for i_, default in enumerate(param.domain, 1):
-                    param_name = f'default{i_}_{param.base_name}'
-                    function_parameters.append(
-                        Parameter(param_name, Parameter.POSITIONAL_OR_KEYWORD,
-                                  annotation=param.view_type, default=default))
-                    qiime_annotations[param_name] = param.qiime_type
-                    defaults[param_name] = default
-
-            func = function_template_1output
-            disguise_function(func, action_id, function_parameters, 1)
-
-            qiime_inputs = {}
-            qiime_parameters = {}
-            qiime_outputs = [('only_output', EchoOutput)]
-            for name, val in qiime_annotations.items():
-                if is_semantic_type(val):
-                    qiime_inputs[name] = val
-                else:
-                    qiime_parameters[name] = val
-
-            usage_examples = {}
-            for i, arg in enumerate(param.domain):
-                usage_examples[f'example_{i}'] = UsageInstantiator(
-                    action_id, {param.base_name: param},
-                    {param.base_name: arg}, qiime_outputs, defaults)
-
-            # one more with defaults all passed a different value
-            new_inputs = {
-                # the last iteration is fine, we aren't testing this param
-                param.base_name: arg
-            }
-            shifted_args = deque([arg, *param.domain])
-            shifted_args.rotate(1)
-            for key, arg in zip(defaults, shifted_args):
-                new_inputs[key] = arg
-
-            usage_examples[f'example_{i+1}'] = UsageInstantiator(
-                action_id,
-                {k: param for k in chain([param.base_name], defaults)},
-                new_inputs, qiime_outputs)
-
-            # prove we can still pass defaults manually
-            usage_examples[f'example_{i+2}'] = UsageInstantiator(
-                action_id,
-                {k: param for k in chain([param.base_name], defaults)},
-                {param.base_name: arg, **defaults}, qiime_outputs)
-
-            plugin.methods.register_function(
-                function=func,
-                inputs=qiime_inputs,
-                parameters=qiime_parameters,
-                outputs=qiime_outputs,
-                input_descriptions={},
-                parameter_descriptions={},
-                output_descriptions={},
-                name=f'Phrase describing {action_id.replace("_", "-")}',
-                description=LOREM_IPSUM,
-                examples=usage_examples
-            )
+    plugin.methods.register_function(
+        function=function,
+        inputs=qiime_inputs,
+        parameters=qiime_parameters,
+        outputs=qiime_outputs,
+        input_descriptions={},
+        parameter_descriptions={},
+        output_descriptions={},
+        name=action_template.action_id.replace("_", "-"),
+        description=LOREM_IPSUM,
+        examples=usage_examples
+    )
 
 
 LOREM_IPSUM = """
