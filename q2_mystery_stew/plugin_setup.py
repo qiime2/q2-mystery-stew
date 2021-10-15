@@ -21,11 +21,18 @@ from q2_mystery_stew.format import (SingleIntFormat, SingleIntDirectoryFormat,
                                     EchoOutputFmt, EchoOutputDirFmt)
 from q2_mystery_stew.template import get_disguised_echo_function
 from q2_mystery_stew.generators import (
-        get_param_generators, generate_single_type_methods)
+        get_param_generators, generate_single_type_methods,
+        generate_multiple_output_methods, generate_typemap_methods, FILTERS)
 from q2_mystery_stew.transformers import to_single_int_format
 
 
 def create_plugin(**filters):
+    for filter_, val in filters.items():
+        if filter_ not in FILTERS:
+            raise ValueError("Unknown filter: %r" % (filter_,))
+        if type(val) is not bool:
+            raise ValueError("Value passed to %r should be True/False, not %r"
+                             % (filter_, val))
     plugin = Plugin(
                name='mystery-stew',
                project_name='q2-mystery-stew',
@@ -39,10 +46,17 @@ def create_plugin(**filters):
              )
 
     register_base_implementation(plugin)
+    if not filters or filters.get('outputs', False):
+        for action_template in generate_multiple_output_methods():
+            register_test_method(plugin, action_template)
 
     selected_types = get_param_generators(**filters)
     for generator in selected_types:
         for action_template in generate_single_type_methods(generator):
+            register_test_method(plugin, action_template)
+
+    if not filters or filters.get('typemaps', False):
+        for action_template in generate_typemap_methods(filters):
             register_test_method(plugin, action_template)
 
     return plugin
@@ -76,7 +90,6 @@ def register_test_method(plugin, action_template):
 
     python_parameters = []
     for spec in action_template.parameter_specs.values():
-        print(spec.default)
         python_parameters.append(Parameter(spec.name,
                                            Parameter.POSITIONAL_OR_KEYWORD,
                                            annotation=spec.view_type,

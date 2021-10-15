@@ -1,3 +1,11 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2020-2021, QIIME 2 development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file LICENSE, distributed with this software.
+# ----------------------------------------------------------------------------
+
 from collections import deque
 
 from qiime2.sdk.util import is_metadata_type, is_semantic_type
@@ -8,7 +16,7 @@ from q2_mystery_stew.generators.base import ActionTemplate, Invocation
 
 def generate_single_type_methods(generator):
     for idx, param in enumerate(generator, 1):
-        action_id = f'test_{generator.__name__}_{idx}'
+        action_id = f'{generator.__name__}_{idx}'
         qiime_outputs = [('only_output', EchoOutput)]
         specs = {}
         defaults = {}
@@ -49,3 +57,17 @@ def generate_single_type_methods(generator):
                              parameter_specs=specs,
                              registered_outputs=qiime_outputs,
                              invocation_domain=domain)
+
+
+def generate_multiple_output_methods():
+    for num_outputs in range(1, 5+1):
+        action_id = f'multiple_outputs_{num_outputs}'
+
+        qiime_outputs = []
+        for idx in range(1, num_outputs+1):
+            qiime_outputs.append((f'output{idx}', EchoOutput))
+
+        yield ActionTemplate(action_id=action_id,
+                             parameter_specs={},
+                             registered_outputs=qiime_outputs,
+                             invocation_domain=[Invocation({}, qiime_outputs)])

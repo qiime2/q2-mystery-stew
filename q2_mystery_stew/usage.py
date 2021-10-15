@@ -21,7 +21,6 @@ class UsageInstantiator:
         self.arguments = arguments
         self.expected_outputs = expected_outputs
         self.output_names = {k: k for k, _ in self.expected_outputs}
-        print(parameter_specs)
 
     def __call__(self, use):
         inputs = {}
@@ -115,4 +114,4 @@ class UsageInstantiator:
         else:
             output.assert_has_line_matching(label='<generated>',
                                             path='echo.txt',
-                                            expression=str(idx))
+                                            expression=str(idx + 1))
