@@ -12,7 +12,7 @@ from collections import namedtuple
 class ParamSpec:
     NoDefault = Parameter.empty
 
-    def __init__(self, name, qiime_type, view_type, default):
+    def __init__(self, name, qiime_type, view_type, default=NoDefault):
         self.name = name
         self.qiime_type = qiime_type
         self.view_type = view_type
