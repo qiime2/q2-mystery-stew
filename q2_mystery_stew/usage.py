@@ -107,13 +107,11 @@ class UsageInstantiator:
                                                defaults.items()):
                 regex = self._fmt_regex(input_name, input_arg)
                 output.assert_has_line_matching(
-                    label='<generated>',
                     path='echo.txt',
                     expression=regex
                 )
         else:
             output.assert_has_line_matching(
-                label='<generated>',
                 path='echo.txt',
                 expression=str(idx),
             )
