@@ -102,16 +102,13 @@ class UsageInstantiator:
     def _assert_output(self, computed_results, output_name, expected_type, idx,
                        realized_arguments):
         output = computed_results[idx]
-        output.assert_output_type(label='<generated>',
-                                  semantic_type=expected_type)
+        output.assert_output_type(semantic_type=expected_type)
 
         if idx == 0:
             for name, arg in realized_arguments.items():
                 regex = self._fmt_regex(name, arg)
-                output.assert_has_line_matching(label='<generated>',
-                                                path='echo.txt',
+                output.assert_has_line_matching(path='echo.txt',
                                                 expression=regex)
         else:
-            output.assert_has_line_matching(label='<generated>',
-                                            path='echo.txt',
+            output.assert_has_line_matching(path='echo.txt',
                                             expression=str(idx + 1))
