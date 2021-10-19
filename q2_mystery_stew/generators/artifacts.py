@@ -37,6 +37,22 @@ def single_int2_3():
     return qiime2.Artifact.import_data('SingleInt2', 2021)
 
 
+def wrapped_int1_1():
+    return qiime2.Artifact.import_data('IntWrapper[WrappedInt1]', -10)
+
+
+def wrapped_int1_2():
+    return qiime2.Artifact.import_data('IntWrapper[WrappedInt1]', -9)
+
+
+def wrapped_int2_1():
+    return qiime2.Artifact.import_data('IntWrapper[WrappedInt1]', 0)
+
+
+def wrapped_int2_2():
+    return qiime2.Artifact.import_data('IntWrapper[WrappedInt1]', -42)
+
+
 def artifact_params():
     yield ParamTemplate('simple_type1', SingleInt1, SingleIntFormat,
                         (single_int1_1, single_int1_2, single_int1_3))

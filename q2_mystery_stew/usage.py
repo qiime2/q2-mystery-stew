@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 
 import re
-from itertools import chain
 
 from qiime2.sdk.util import (is_semantic_type, is_metadata_type,
                              is_metadata_column_type)
@@ -16,52 +15,50 @@ from q2_mystery_stew.template import argument_to_line
 
 
 class UsageInstantiator:
-    def __init__(self, name, param_templates, inputs, outputs, defaults=None):
-        self.name = name
-        self.param_templates = param_templates
-        self.inputs = inputs
-        self.outputs = outputs
-        if defaults is None:
-            defaults = {}
-        self.defaults = defaults
-        self.output_names = {k: k for k, _ in self.outputs}
+    def __init__(self, id, parameter_specs, arguments, expected_outputs):
+        self.id = id
+        self.parameter_specs = parameter_specs
+        self.arguments = arguments
+        self.expected_outputs = expected_outputs
+        self.output_names = {k: k for k, _ in self.expected_outputs}
 
     def __call__(self, use):
         inputs = {}
-        transformed_inputs = {}
+        realized_arguments = {}
 
-        for name, argument in self.inputs.items():
-            template = self.param_templates[name]
+        for name, argument in self.arguments.items():
+            spec = self.parameter_specs[name]
 
             if argument is None:
-                inputs[name] = transformed_inputs[name] = None
-            elif is_semantic_type(template.qiime_type):
+                inputs[name] = realized_arguments[name] = None
+            elif is_semantic_type(spec.qiime_type):
                 if type(argument) == list or type(argument) == set:
                     collection_type = type(argument)
-                    input_temp = []
-                    transformed_inputs[name] = collection_type()
+                    realized_arguments[name] = collection_type()
+                    inputs[name] = collection_type()
 
                     for arg in argument:
-                        input_temp.append(use.init_data(arg.__name__, arg))
                         artifact = arg()
-                        view = artifact.view(template.view_type)
+                        view = artifact.view(spec.view_type)
                         view.__hide_from_garbage_collector = artifact
 
                         if collection_type == list:
-                            transformed_inputs[name].append(view)
+                            realized_arguments[name].append(view)
+                            inputs[name].append(
+                                use.init_artifact(arg.__name__, arg))
                         elif collection_type == set:
-                            transformed_inputs[name].add(view)
-                        inputs[name] = \
-                            use.init_data_collection(name, collection_type,
-                                                     *input_temp)
+                            realized_arguments[name].add(view)
+                            inputs[name].add(
+                                use.init_artifact(arg.__name__, arg))
                 else:
-                    inputs[name] = use.init_data(argument.__name__, argument)
+                    inputs[name] = use.init_artifact(argument.__name__,
+                                                     argument)
                     artifact = argument()
-                    view = artifact.view(template.view_type)
+                    view = artifact.view(spec.view_type)
                     view.__hide_from_garbage_collector = artifact
-                    transformed_inputs[name] = view
-            elif is_metadata_type(template.qiime_type):
-                if is_metadata_column_type(template.qiime_type):
+                    realized_arguments[name] = view
+            elif is_metadata_type(spec.qiime_type):
+                if is_metadata_column_type(spec.qiime_type):
                     factory, column_name = argument
                 else:
                     factory, column_name = argument, None
@@ -71,45 +68,47 @@ class UsageInstantiator:
 
                 if column_name is None:
                     inputs[name] = md_rec
-                    transformed_inputs[name] = md
+                    realized_arguments[name] = md
                 else:
-                    inputs[name] = use.get_metadata_column(column_name, md_rec)
-                    transformed_inputs[name] = md.get_column(column_name)
+                    inputs[name] = use.get_metadata_column(
+                        '%s_%s' % (factory.__name__, column_name),
+                        column_name,
+                        md_rec,
+                    )
+                    realized_arguments[name] = md.get_column(column_name)
 
             else:
-                inputs[name] = transformed_inputs[name] = argument
+                inputs[name] = realized_arguments[name] = argument
 
-        use.action(
-            use.UsageAction(plugin_id='mystery_stew', action_id=self.name),
+        for name, spec in self.parameter_specs.items():
+            if name not in realized_arguments:
+                realized_arguments[name] = spec.default
+
+        computed_results = use.action(
+            use.UsageAction(plugin_id='mystery_stew', action_id=self.id),
             use.UsageInputs(**inputs),
             use.UsageOutputNames(**self.output_names),
         )
 
-        for idx, (output_name, expected_type) in enumerate(self.outputs):
-            self._assert_output(use, transformed_inputs, self.defaults,
-                                output_name, expected_type, idx)
+        for idx, (name, expected_type) in enumerate(self.expected_outputs):
+            self._assert_output(computed_results, name, expected_type, idx,
+                                realized_arguments)
 
     @staticmethod
     def _fmt_regex(name, arg):
         line = argument_to_line(name, arg).strip()
         return re.escape(line)
 
-    def _assert_output(self, use, inputs, defaults, output_name, expected_type,
-                       idx):
+    def _assert_output(self, computed_results, output_name, expected_type, idx,
+                       realized_arguments):
+        output = computed_results[idx]
+        output.assert_output_type(semantic_type=expected_type)
+
         if idx == 0:
-            for input_name, input_arg in chain(inputs.items(),
-                                               defaults.items()):
-                regex = self._fmt_regex(input_name, input_arg)
-                output = use.get_result(output_name)
-                output.assert_has_line_matching(
-                    label='<generated>',
-                    path='echo.txt',
-                    expression=regex
-                )
+            for name, arg in realized_arguments.items():
+                regex = self._fmt_regex(name, arg)
+                output.assert_has_line_matching(path='echo.txt',
+                                                expression=regex)
         else:
-            output = use.get_result(output_name)
-            output.assert_has_line_matching(
-                label='<generated>',
-                path='echo.txt',
-                expression=str(idx),
-            )
+            output.assert_has_line_matching(path='echo.txt',
+                                            expression=str(idx + 1))
