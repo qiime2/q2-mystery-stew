@@ -8,6 +8,7 @@
 
 import re
 
+import qiime2
 from qiime2.sdk.util import (is_semantic_type, is_metadata_type,
                              is_metadata_column_type)
 
@@ -63,17 +64,44 @@ class UsageInstantiator:
                 else:
                     factory, column_name = argument, None
 
-                md_rec = use.init_metadata(factory.__name__, factory)
-                md = factory()
+                if type(factory) is list:
+                    realized_factories = [f() for f in factory]
+                    factories = factory
+                else:
+                    realized_factories = [factory()]
+                    factories = [factory]
+
+                md_vars = []
+                realized_mds = []
+                for md, factory in zip(realized_factories, factories):
+                    if not isinstance(md, qiime2.Metadata):
+                        var = use.init_artifact(factory.__name__, factory)
+                        md_var = use.view_as_metadata(factory.__name__ + "_md",
+                                                      var)
+                        md = md.view(qiime2.Metadata)
+                    else:
+                        md_var = use.init_metadata(factory.__name__, factory)
+
+                    md_vars.append(md_var)
+                    realized_mds.append(md)
+
+                if len(md_vars) > 1:
+                    md_var = use.merge_metadata(
+                        '_'.join([f.__name__ for f in factories]),
+                        *md_vars)
+                    md = realized_mds[0].merge(*realized_mds[1:])
+                else:
+                    md_var = md_vars[0]
+                    md = realized_mds[0]
 
                 if column_name is None:
-                    inputs[name] = md_rec
+                    inputs[name] = md_var
                     realized_arguments[name] = md
                 else:
                     inputs[name] = use.get_metadata_column(
-                        '%s_%s' % (factory.__name__, column_name),
+                        '%s_%s' % (md_var.name, column_name),
                         column_name,
-                        md_rec,
+                        md_var,
                     )
                     realized_arguments[name] = md.get_column(column_name)
 

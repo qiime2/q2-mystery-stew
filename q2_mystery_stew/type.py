@@ -23,3 +23,6 @@ IntWrapper = SemanticType('IntWrapper', field_names='first')
 _variant = IntWrapper.field['first']
 WrappedInt1 = SemanticType('WrappedInt1', variant_of=_variant)
 WrappedInt2 = SemanticType('WrappedInt2', variant_of=_variant)
+
+
+BasicallyMetadata = SemanticType('BasicallyMetadata')

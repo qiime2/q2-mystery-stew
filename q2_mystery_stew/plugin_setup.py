@@ -15,15 +15,17 @@ import q2_mystery_stew
 from q2_mystery_stew.type import (EchoOutput, SingleInt1, SingleInt2,
                                   IntWrapper, WrappedInt1, WrappedInt2,
                                   EchoOutputBranch1, EchoOutputBranch2,
-                                  EchoOutputBranch3)
+                                  EchoOutputBranch3, BasicallyMetadata)
 from q2_mystery_stew.usage import UsageInstantiator
-from q2_mystery_stew.format import (SingleIntFormat, SingleIntDirectoryFormat,
-                                    EchoOutputFmt, EchoOutputDirFmt)
+from q2_mystery_stew.format import (
+    SingleIntFormat, SingleIntDirectoryFormat, EchoOutputFmt, EchoOutputDirFmt,
+    MetadataLikeFormat, MetadataLikeDirectoryFormat)
 from q2_mystery_stew.template import get_disguised_echo_function
 from q2_mystery_stew.generators import (
         get_param_generators, generate_single_type_methods,
         generate_multiple_output_methods, generate_typemap_methods, FILTERS)
-from q2_mystery_stew.transformers import to_single_int_format
+from q2_mystery_stew.transformers import (
+    to_single_int_format, transform_from_metatadata, transform_to_metadata)
 
 
 def create_plugin(**filters):
@@ -64,10 +66,12 @@ def create_plugin(**filters):
 
 def register_base_implementation(plugin):
     plugin.register_semantic_types(SingleInt1, SingleInt2, IntWrapper,
-                                   WrappedInt1, WrappedInt2, EchoOutput)
+                                   WrappedInt1, WrappedInt2, EchoOutput,
+                                   BasicallyMetadata)
 
-    plugin.register_formats(SingleIntFormat, SingleIntDirectoryFormat,
-                            EchoOutputFmt, EchoOutputDirFmt)
+    plugin.register_formats(
+        SingleIntFormat, SingleIntDirectoryFormat, EchoOutputFmt,
+        EchoOutputDirFmt, MetadataLikeFormat, MetadataLikeDirectoryFormat)
 
     plugin.register_semantic_type_to_format(SingleInt1,
                                             SingleIntDirectoryFormat)
@@ -80,7 +84,12 @@ def register_base_implementation(plugin):
         EchoOutput | EchoOutputBranch1 | EchoOutputBranch2 | EchoOutputBranch3,
         EchoOutputDirFmt)
 
+    plugin.register_semantic_type_to_format(BasicallyMetadata,
+                                            MetadataLikeDirectoryFormat)
+
     plugin.register_transformer(to_single_int_format)
+    plugin.register_transformer(transform_to_metadata)
+    plugin.register_transformer(transform_from_metatadata)
 
 
 def register_test_method(plugin, action_template):

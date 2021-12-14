@@ -6,6 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+import qiime2
 from qiime2.plugin import TextFileFormat, ValidationError
 import qiime2.plugin.model as model
 
@@ -31,6 +32,21 @@ class SingleIntFormat(TextFileFormat):
 
 SingleIntDirectoryFormat = model.SingleFileDirectoryFormat(
     'SingleIntDirectoryFormat', 'int.txt', SingleIntFormat)
+
+
+class MetadataLikeFormat(TextFileFormat):
+    """
+    Just the QIIME 2 metadata format
+    """
+    def _validate_(self, level):
+        try:
+            qiime2.Metadata.load(str(self))
+        except Exception as e:
+            raise ValidationError(str(e))
+
+
+MetadataLikeDirectoryFormat = model.SingleFileDirectoryFormat(
+    'MetadataLikeDirectoryFormat', 'just-metadata.tsv', MetadataLikeFormat)
 
 
 class EchoOutputFmt(model.TextFileFormat):
