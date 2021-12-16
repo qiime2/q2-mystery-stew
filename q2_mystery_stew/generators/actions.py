@@ -45,7 +45,7 @@ def generate_single_type_methods(generator):
                                  qiime_outputs))
 
         # USAGE: pass a different value to all defaults
-        if len(defaults) > 1:
+        if len(param.domain) > 1:
             # if len(domain) is 1, then there would be nothing to rotate and
             # the arguments would be the same as the default
             shifted = deque([arg, arg, *param.domain])
