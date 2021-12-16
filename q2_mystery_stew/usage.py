@@ -27,11 +27,24 @@ class UsageInstantiator:
         inputs = {}
         realized_arguments = {}
 
+        # This is needed to prevent namespace collision when reusing var inputs
+        # when parameter domains end up being "rotated" around to test things
+        # This dictionary should not survive beyond __call__
+        memoized_vars = {}
+
+        def do(use_method, *args):
+            # name is always the first arg to a usage method
+            name = args[0]
+            if name not in memoized_vars:
+                memoized_vars[name] = use_method(*args)
+            return memoized_vars[name]
+
         for name, argument in self.arguments.items():
             spec = self.parameter_specs[name]
 
             if argument is None:
                 inputs[name] = realized_arguments[name] = None
+
             elif is_semantic_type(spec.qiime_type):
                 if type(argument) == list or type(argument) == set:
                     collection_type = type(argument)
@@ -42,22 +55,23 @@ class UsageInstantiator:
                         artifact = arg()
                         view = artifact.view(spec.view_type)
                         view.__hide_from_garbage_collector = artifact
+                        var = do(use.init_artifact, arg.__name__, arg)
 
                         if collection_type == list:
                             realized_arguments[name].append(view)
-                            inputs[name].append(
-                                use.init_artifact(arg.__name__, arg))
+                            inputs[name].append(var)
                         elif collection_type == set:
                             realized_arguments[name].add(view)
-                            inputs[name].add(
-                                use.init_artifact(arg.__name__, arg))
+                            inputs[name].add(var)
                 else:
-                    inputs[name] = use.init_artifact(argument.__name__,
-                                                     argument)
                     artifact = argument()
                     view = artifact.view(spec.view_type)
                     view.__hide_from_garbage_collector = artifact
+                    var = do(use.init_artifact, argument.__name__, argument)
+
                     realized_arguments[name] = view
+                    inputs[name] = var
+
             elif is_metadata_type(spec.qiime_type):
                 if is_metadata_column_type(spec.qiime_type):
                     factory, column_name = argument
@@ -75,35 +89,36 @@ class UsageInstantiator:
                 realized_mds = []
                 for md, factory in zip(realized_factories, factories):
                     if not isinstance(md, qiime2.Metadata):
-                        var = use.init_artifact(factory.__name__, factory)
-                        md_var = use.view_as_metadata(factory.__name__ + "_md",
-                                                      var)
+                        var = do(use.init_artifact, factory.__name__, factory)
+                        md_var = do(use.view_as_metadata,
+                                    factory.__name__ + "_md", var)
                         md = md.view(qiime2.Metadata)
                     else:
-                        md_var = use.init_metadata(factory.__name__, factory)
+                        md_var = do(use.init_metadata,
+                                    factory.__name__, factory)
 
                     md_vars.append(md_var)
                     realized_mds.append(md)
 
                 if len(md_vars) > 1:
-                    md_var = use.merge_metadata(
-                        '_'.join([f.__name__ for f in factories]),
-                        *md_vars)
+                    md_var = do(use.merge_metadata,
+                                '_'.join([f.__name__ for f in factories]),
+                                *md_vars)
                     md = realized_mds[0].merge(*realized_mds[1:])
                 else:
                     md_var = md_vars[0]
                     md = realized_mds[0]
 
                 if column_name is None:
-                    inputs[name] = md_var
                     realized_arguments[name] = md
+                    inputs[name] = md_var
                 else:
-                    inputs[name] = use.get_metadata_column(
-                        '%s_%s' % (md_var.name, column_name),
-                        column_name,
-                        md_var,
-                    )
+                    col_var = do(use.get_metadata_column,
+                                 '%s_%s' % (md_var.name, column_name),
+                                 column_name,
+                                 md_var)
                     realized_arguments[name] = md.get_column(column_name)
+                    inputs[name] = col_var
 
             else:
                 inputs[name] = realized_arguments[name] = argument
@@ -112,6 +127,7 @@ class UsageInstantiator:
             if name not in realized_arguments:
                 realized_arguments[name] = spec.default
 
+        # no need to memoize, these outputs will not be used (only assertions)
         computed_results = use.action(
             use.UsageAction(plugin_id='mystery_stew', action_id=self.id),
             use.UsageInputs(**inputs),
