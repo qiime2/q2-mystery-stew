@@ -46,23 +46,32 @@ class UsageInstantiator:
                 inputs[name] = realized_arguments[name] = None
 
             elif is_semantic_type(spec.qiime_type):
-                if type(argument) == list or type(argument) == set:
+                if type(argument) == list or type(argument) == dict:
                     collection_type = type(argument)
                     realized_arguments[name] = collection_type()
                     inputs[name] = collection_type()
 
-                    for arg in argument:
-                        artifact = arg()
-                        view = artifact.view(spec.view_type)
-                        view.__hide_from_garbage_collector = artifact
-                        var = do(use.init_artifact, arg.__name__, arg)
+                    if collection_type == list:
+                        for arg in argument:
+                            artifact = arg()
+                            view = artifact.view(spec.view_type)
+                            view.__hide_from_garbage_collector = artifact
+                            var = do(use.init_artifact, arg.__name__, arg)
 
-                        if collection_type == list:
                             realized_arguments[name].append(view)
                             inputs[name].append(var)
-                        elif collection_type == set:
-                            realized_arguments[name].add(view)
-                            inputs[name].add(var)
+
+                    # we know that if we're not a list, we'll be a dict
+                    else:
+                        for key, arg in argument.items():
+                            artifact = arg()
+                            view = artifact.view(spec.view_type)
+                            view.__hide_from_garbage_collector = artifact
+                            var = do(use.init_artifact, arg.__name__, arg)
+
+                            realized_arguments[name][key] = view
+                            inputs[name][key] = var
+
                 else:
                     artifact = argument()
                     view = artifact.view(spec.view_type)

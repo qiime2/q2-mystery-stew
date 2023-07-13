@@ -26,7 +26,8 @@ from q2_mystery_stew.generators.primitive import (
 from q2_mystery_stew.generators.artifacts import (
     single_int1_1, single_int1_2, single_int2_1, single_int2_2, wrapped_int1_1,
     wrapped_int1_2, wrapped_int2_1, wrapped_int2_2)
-from q2_mystery_stew.generators.collections import list_paramgen, set_paramgen
+from q2_mystery_stew.generators.collections import (list_paramgen,
+                                                    collection_paramgen)
 
 OUTPUT_STATES = [EchoOutputBranch1, EchoOutputBranch2, EchoOutputBranch3]
 
@@ -64,8 +65,10 @@ def generate_typemap_methods(filters):
     if should_add('collections'):
         yield from generate_the_matrix(
             'typemap_lists', [list_paramgen(x()) for x in selected_types])
+        # TODO: this probably needs to change for collections
         yield from generate_the_matrix(
-            'typemap_sets', [set_paramgen(x()) for x in selected_types])
+            'typemap_collections', [collection_paramgen(x())
+                                    for x in selected_types])
 
 
 def _to_action(factory):

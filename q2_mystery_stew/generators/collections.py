@@ -8,8 +8,7 @@
 
 import itertools
 
-
-from qiime2.plugin import List, Set
+from qiime2.plugin import List, Collection
 
 from q2_mystery_stew.generators.base import ParamTemplate
 
@@ -39,13 +38,14 @@ def list_paramgen(generator):
     return make_list()
 
 
-def set_paramgen(generator):
-    def make_set():
+def collection_paramgen(generator):
+    def make_collection():
         for param in generator:
             yield ParamTemplate(
-                param.base_name + "_set",
-                Set[param.qiime_type],
+                param.base_name + "_collection",
+                Collection[param.qiime_type],
                 param.view_type,
-                tuple(set(x) for x in underpowered_set(param.domain)))
-    make_set.__name__ = 'set_' + generator.__name__
-    return make_set()
+                tuple({str(k): v for k, v in enumerate(x)}
+                      for x in underpowered_set(param.domain)))
+    make_collection.__name__ = 'collection_' + generator.__name__
+    return make_collection()
