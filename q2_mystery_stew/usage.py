@@ -67,10 +67,19 @@ class UsageInstantiator:
                             artifact = arg()
                             view = artifact.view(spec.view_type)
                             view.__hide_from_garbage_collector = artifact
-                            var = do(use.init_artifact, arg.__name__, arg)
 
                             realized_arguments[name][key] = view
-                            inputs[name][key] = var
+
+                        def factory():
+                            _input = {}
+                            for k, v in argument.items():
+                                if callable(v):
+                                    v = v()
+                                _input[k] = v
+                            return _input
+
+                        var = do(use.init_result_collection, name, factory)
+                        inputs[name] = var
 
                 else:
                     artifact = argument()

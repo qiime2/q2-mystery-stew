@@ -57,7 +57,7 @@ def argument_to_line(name, arg):
 
     # We need a list so we can jsonize it (cannot jsonize sets)
     sort = False
-    if type(arg) is list or type(arg) is set:
+    if type(arg) is list:
         temp = []
         for i in value:
             # If we are given a set of artifacts it will be turned into a list
@@ -74,6 +74,16 @@ def argument_to_line(name, arg):
             value = sorted(temp, key=repr)
         else:
             value = temp
+    elif type(arg) is qiime2.ResultCollection or type(arg) is dict:
+        temp = {}
+        for k, v in value.items():
+            if isinstance(v, SingleIntFormat):
+                temp[k] = v.get_int()
+                expected_type = 'dict'
+            else:
+                temp[k] = v
+
+        value = temp
 
     return json.dumps([name, value, expected_type]) + '\n'
 
