@@ -23,30 +23,22 @@ def get_disguised_echo_function(id, python_parameters, qiime_outputs):
         _function_template_5output,
     ]
 
-    # raise ValueError(qiime_outputs)
-    # raise ValueError(str(qiime_outputs[0][1]))
-    # qiime_outputs is a list of (name, type) tuples. If all output types are
-    # EchoFormat, get template based on number of outputs
-    types = []
-    for output in qiime_outputs:
-        _, _type = output
-        types.append(str(_type))
-
-    if all(_type == 'EchoOutput' for _type in types):
-        function = TEMPLATES[len(qiime_outputs) - 1]
-    # Otherwise if we only have have one output it must be a
-    # Collection[EchoOutput]
-    elif len(qiime_outputs) == 1:
-        function = _function_template_collection_only
-    # Otherwise, we need to figure out if the Collection is first or second in
-    # the outputs
-    else:
-        # Check if type of first output is collection
-        if str(qiime_outputs[0][1]) == 'Collection[EchoOutput]':
-            function = _function_template_collection_first
-        # Otherwise, it must be the second
+    # If the first output is a Collection we check how many outputs we have
+    if str(qiime_outputs[0][1]) == 'Collection[EchoOutput]':
+        # If we only have the collection we use this template
+        if len(qiime_outputs) == 1:
+            function = _function_template_collection_only
+        # Otherwise, the collection is first of several, so we use this one
         else:
-            function = _function_template_collection_second
+            function = _function_template_collection_first
+    # Now we need to check if the second argument is a collection, only the
+    # first or second ever will be
+    elif len(qiime_outputs) > 1 \
+            and str(qiime_outputs[1][1]) == 'Collection[EchoOutput]':
+        function = _function_template_collection_second
+    # In all other cases, we do not need a collection output template
+    else:
+        function = TEMPLATES[len(qiime_outputs) - 1]
 
     disguise_echo_function(function, id, python_parameters, len(qiime_outputs))
 
@@ -113,20 +105,17 @@ def argument_to_line(name, arg):
 
 
 def _echo_outputs(kwargs, num_outputs, collection_idx=None):
-    """ NOTE: We used 1 based indexing here for reasons I do not remember, so
-        collection_idx uses 1 based indexing.
-    """
     outputs = []
 
-    if collection_idx == 1:
+    if collection_idx == 0:
         output = _echo_collection(kwargs=kwargs)
     else:
         output = _echo_single(kwargs=kwargs)
 
     outputs.append(output)
 
-    # We already handled the 1st output above, and we do 1 based indexing
-    for idx in range(2, num_outputs + 1):
+    # We already handled the 1st output above
+    for idx in range(1, num_outputs):
         if idx == collection_idx:
             output = _echo_collection(idx=idx)
         else:
@@ -184,12 +173,12 @@ def _function_template_5output(**kwargs):
 
 
 def _function_template_collection_only(**kwargs):
-    return _echo_outputs(kwargs, 1, 1)
+    return _echo_outputs(kwargs, 1, 0)
 
 
 def _function_template_collection_first(**kwargs):
-    return _echo_outputs(kwargs, 2, 2)
+    return _echo_outputs(kwargs, 2, 0)
 
 
 def _function_template_collection_second(**kwargs):
-    return _echo_outputs(kwargs, 2, 2)
+    return _echo_outputs(kwargs, 2, 1)
