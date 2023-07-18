@@ -115,7 +115,7 @@ def register_test_method(plugin, action_template):
 
     function = get_disguised_echo_function(id=action_template.action_id,
                                            python_parameters=python_parameters,
-                                           num_outputs=len(qiime_outputs))
+                                           qiime_outputs=qiime_outputs)
     usage_examples = {}
     for idx, invocation in enumerate(action_template.invocation_domain):
         usage_examples[f'example_{idx}'] = UsageInstantiator(
