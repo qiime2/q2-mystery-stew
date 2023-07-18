@@ -13,6 +13,8 @@ import qiime2
 
 from q2_mystery_stew.format import SingleIntFormat, EchoOutputFmt
 
+OUTPUT_COLLECTION_SIZE = 2
+
 
 def get_disguised_echo_function(id, python_parameters, qiime_outputs):
     TEMPLATES = [
@@ -133,7 +135,7 @@ def _echo_collection(kwargs=None, idx=None):
         for name, arg in kwargs.items():
             outputs[name] = _echo_single(kwargs={name: arg})
     else:
-        for i in range(2):
+        for i in range(OUTPUT_COLLECTION_SIZE):
             outputs[i] = _echo_single(kwargs={idx: i})
 
     return outputs

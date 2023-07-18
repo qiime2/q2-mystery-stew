@@ -12,7 +12,7 @@ import qiime2
 from qiime2.sdk.util import (is_semantic_type, is_metadata_type,
                              is_metadata_column_type)
 
-from q2_mystery_stew.template import argument_to_line
+from q2_mystery_stew.template import argument_to_line, OUTPUT_COLLECTION_SIZE
 
 
 class UsageInstantiator:
@@ -172,7 +172,7 @@ class UsageInstantiator:
             self._assert_output_single(output, idx, realized_arguments)
 
     def _assert_output_collection(self, output, idx, realized_arguments):
-        for i in range(2):
+        for i in range(OUTPUT_COLLECTION_SIZE):
             self._assert_output_single(
                 output, idx, realized_arguments, key=str(i))
 
