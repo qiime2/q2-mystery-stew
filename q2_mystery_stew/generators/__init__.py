@@ -12,7 +12,8 @@ from .metadata import metadata_params
 from .artifacts import artifact_params
 from .collections import list_paramgen, collection_paramgen
 from .actions import (generate_single_type_methods,
-                      generate_multiple_output_methods)
+                      generate_multiple_output_methods,
+                      generate_output_collection_methods)
 from .base import ParamTemplate, ActionTemplate, ParamSpec, Invocation
 
 BASIC_GENERATORS = {
@@ -56,6 +57,6 @@ __all__ = ['int_params', 'float_params', 'string_params', 'bool_params',
            'primitive_union_params', 'metadata_params', 'artifact_params',
            'list_paramgen', 'collection_paramgen',
            'generate_single_type_methods', 'generate_multiple_output_methods',
-           'generate_typemap_methods', 'BASIC_GENERATORS', 'FILTERS',
-           'get_param_generators', 'ParamTemplate', 'ParamSpec',
-           'ActionTemplate', 'Invocation']
+           'generate_output_collection_methods', 'generate_typemap_methods',
+           'BASIC_GENERATORS', 'FILTERS', 'get_param_generators',
+           'ParamTemplate', 'ParamSpec', 'ActionTemplate', 'Invocation']
