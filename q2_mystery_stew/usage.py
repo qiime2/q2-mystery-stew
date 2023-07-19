@@ -9,6 +9,7 @@
 import re
 
 import qiime2
+from qiime2.sdk import ResultCollection, Result
 from qiime2.sdk.util import (is_semantic_type, is_metadata_type,
                              is_metadata_column_type)
 
@@ -76,6 +77,10 @@ class UsageInstantiator:
                                 if callable(v):
                                     v = v()
                                 _input[k] = v
+                            if all(isinstance(v, Result)
+                                   for v in _input.values()):
+                                _input = ResultCollection(_input)
+
                             return _input
 
                         var = do(use.init_result_collection, name, factory)

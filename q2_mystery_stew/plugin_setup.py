@@ -49,18 +49,18 @@ def create_plugin(**filters):
              )
 
     register_base_implementation(plugin)
-    if not filters or filters.get('outputs', False):
-        for action_template in generate_multiple_output_methods():
-            register_test_method(plugin, action_template)
+    # if not filters or filters.get('outputs', False):
+    #     for action_template in generate_multiple_output_methods():
+    #         register_test_method(plugin, action_template)
 
     selected_types = get_param_generators(**filters)
     for generator in selected_types:
         for action_template in generate_single_type_methods(generator):
             register_test_method(plugin, action_template)
 
-    if not filters or filters.get('typemaps', False):
-        for action_template in generate_typemap_methods(filters):
-            register_test_method(plugin, action_template)
+    # if not filters or filters.get('typemaps', False):
+    #     for action_template in generate_typemap_methods(filters):
+    #         register_test_method(plugin, action_template)
 
     if not filters or filters.get('output_collections', False):
         for action_template in generate_output_collection_methods():
