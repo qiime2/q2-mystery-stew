@@ -25,7 +25,8 @@ BASIC_GENERATORS = {
     'strings': string_params,
     'primitive_unions': primitive_union_params,
 }
-FILTERS = {*BASIC_GENERATORS.keys(), 'collections', 'typemaps', 'outputs'}
+FILTERS = {*BASIC_GENERATORS.keys(), 'collections', 'typemaps', 'outputs',
+           'output_collections'}
 
 from .typemaps import generate_typemap_methods  # noqa: E402
 
