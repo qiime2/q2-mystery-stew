@@ -136,7 +136,10 @@ def _echo_collection(kwargs=None, idx=None):
             outputs[name] = _echo_single(kwargs={name: arg})
     else:
         for i in range(OUTPUT_COLLECTION_SIZE):
-            outputs[i] = _echo_single(kwargs={idx: i})
+            # Elements within a collection have a dual index, the index of the
+            # entire output followed by the index of the element within the
+            # collection
+            outputs[i] = _echo_single(idx=f'{idx}: {i}')
 
     return outputs
 
