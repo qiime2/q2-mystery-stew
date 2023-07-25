@@ -172,17 +172,19 @@ class UsageInstantiator:
         output.assert_output_type(semantic_type=expected_type)
 
         if output.var_type == 'result_collection':
-            self._assert_output_collection(output, idx, realized_arguments)
+            self._assert_output_collection(output, idx, realized_arguments, expected_type)
         else:
             self._assert_output_single(output, idx, realized_arguments)
 
-    def _assert_output_collection(self, output, idx, realized_arguments):
+    def _assert_output_collection(self, output, idx, realized_arguments, expected_type):
+        inner_type = expected_type.fields[0]
         for i in range(OUTPUT_COLLECTION_SIZE):
+            output.assert_output_type(semantic_type=inner_type, key=idx)
             self._assert_output_single(
-                output, idx, realized_arguments, key=str(i))
+                output, idx, realized_arguments, key=i)
 
     def _assert_output_single(self, output, idx, realized_arguments, key=None):
-        if idx == 0:
+        if idx == 0 and realized_arguments:
             for name, arg in realized_arguments.items():
                 regex = self._fmt_regex(name, arg)
                 output.assert_has_line_matching(path='echo.txt',

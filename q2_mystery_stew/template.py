@@ -110,9 +110,9 @@ def _echo_outputs(kwargs, num_outputs, collection_idx=None):
     outputs = []
 
     if collection_idx == 0:
-        output = _echo_collection(kwargs=kwargs)
+        output = _echo_collection(kwargs=kwargs, idx=0)
     else:
-        output = _echo_single(kwargs=kwargs)
+        output = _echo_single(kwargs=kwargs, idx=0)
 
     outputs.append(output)
 
