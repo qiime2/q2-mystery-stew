@@ -78,18 +78,12 @@ def argument_to_line(name, arg):
     if type(arg) is list:
         temp = []
         for i in value:
-            # If we are given a set of artifacts it will be turned into a list
-            # by the framework, so we need to be ready to accept a list
             if isinstance(i, SingleIntFormat):
                 temp.append(i.get_int())
                 expected_type = 'list'
                 sort = True
             else:
                 temp.append(i)
-        # If we turned a set into a list for json purposes, we need to sort it
-        # to ensure it is always in the same order
-        if type(arg) is set or sort:
-            value = sorted(temp, key=repr)
         else:
             value = temp
     elif type(arg) is qiime2.ResultCollection or type(arg) is dict:
