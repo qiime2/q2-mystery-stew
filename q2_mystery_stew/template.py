@@ -73,15 +73,12 @@ def argument_to_line(name, arg):
                           qiime2.NumericMetadataColumn)):
         value = arg.to_series().to_json()
 
-    # We need a list so we can jsonize it (cannot jsonize sets)
-    sort = False
     if type(arg) is list:
         temp = []
         for i in value:
             if isinstance(i, SingleIntFormat):
                 temp.append(i.get_int())
                 expected_type = 'list'
-                sort = True
             else:
                 temp.append(i)
         else:
