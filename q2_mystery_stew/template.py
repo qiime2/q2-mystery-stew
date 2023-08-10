@@ -14,6 +14,8 @@ import qiime2
 from q2_mystery_stew.format import SingleIntFormat, EchoOutputFmt
 
 OUTPUT_COLLECTION_SIZE = 2
+OUTPUT_COLLECTION_START = 42
+OUTPUT_COLLECTION_END = OUTPUT_COLLECTION_START + OUTPUT_COLLECTION_SIZE
 
 
 def get_disguised_echo_function(id, python_parameters, qiime_outputs):
@@ -126,7 +128,7 @@ def _echo_collection(kwargs=None, idx=None):
         for name, arg in kwargs.items():
             outputs[name] = _echo_single(kwargs={name: arg})
     else:
-        for i in range(OUTPUT_COLLECTION_SIZE):
+        for i in range(OUTPUT_COLLECTION_START, OUTPUT_COLLECTION_END):
             # Elements within a collection have a dual index, the index of the
             # entire output followed by the index of the element within the
             # collection
