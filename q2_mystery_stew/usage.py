@@ -12,6 +12,7 @@ import qiime2
 from qiime2.sdk import ResultCollection, Result
 from qiime2.sdk.util import (is_semantic_type, is_metadata_type,
                              is_metadata_column_type)
+from qiime2.sdk.usage import COLLECTION_VAR_TYPES
 
 from q2_mystery_stew.template import (
     argument_to_line, OUTPUT_COLLECTION_START, OUTPUT_COLLECTION_END)
@@ -172,8 +173,7 @@ class UsageInstantiator:
         output = computed_results[idx]
         output.assert_output_type(semantic_type=expected_type)
 
-        if output.var_type in ('artifact_collection',
-                               'visualization_collection'):
+        if output.var_type in COLLECTION_VAR_TYPES:
             self._assert_output_collection(output, idx, realized_arguments,
                                            expected_type)
         else:
