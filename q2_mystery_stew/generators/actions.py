@@ -60,7 +60,6 @@ def generate_single_type_methods(generator):
                              invocation_domain=domain)
 
 
-# TODO: Add functions to do with generating output collection methods here
 def generate_multiple_output_methods():
     for num_outputs in range(1, 5+1):
         action_id = f'multiple_outputs_{num_outputs}'

@@ -65,7 +65,6 @@ def generate_typemap_methods(filters):
     if should_add('collections'):
         yield from generate_the_matrix(
             'typemap_lists', [list_paramgen(x()) for x in selected_types])
-        # TODO: this probably needs to change for collections
         yield from generate_the_matrix(
             'typemap_collections', [collection_paramgen(x())
                                     for x in selected_types])
