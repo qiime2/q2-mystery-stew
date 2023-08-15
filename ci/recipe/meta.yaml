@@ -27,6 +27,9 @@ test:
   imports:
     - q2_mystery_stew
 
+  commands:
+    - py.test --pyargs q2_mystery_stew
+
 about:
   home: https://qiime2.org
   license: BSD-3-Clause
