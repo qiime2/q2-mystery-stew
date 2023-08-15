@@ -49,7 +49,7 @@ class UsageInstantiator:
                 inputs[name] = realized_arguments[name] = None
 
             elif is_semantic_type(spec.qiime_type):
-                if type(argument) == list or type(argument) == dict:
+                if type(argument) is list or type(argument) is dict:
                     collection_type = type(argument)
                     realized_arguments[name] = collection_type()
                     inputs[name] = collection_type()
