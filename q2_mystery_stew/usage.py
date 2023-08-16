@@ -73,17 +73,25 @@ class UsageInstantiator:
 
                             realized_arguments[name][key] = view
 
-                        def factory():
-                            _input = {}
-                            for k, v in argument.items():
-                                if callable(v):
-                                    v = v()
-                                _input[k] = v
-                            if all(isinstance(v, Result)
-                                   for v in _input.values()):
-                                _input = ResultCollection(_input)
+                        def _closure(argument):
+                            # We need to bind the argument from the loop above
+                            # for the factory to use the correct one.
+                            # Otherwise the argument will always be the last
+                            # element.
+                            def factory():
+                                _input = {}
+                                for k, v in argument.items():
+                                    if callable(v):
+                                        v = v()
+                                    _input[k] = v
+                                if all(isinstance(v, Result)
+                                       for v in _input.values()):
+                                    _input = ResultCollection(_input)
 
-                            return _input
+                                return _input
+                            return factory
+                        # neato!
+                        factory = _closure(argument)
 
                         var = do(use.init_result_collection, name, factory)
                         inputs[name] = var
