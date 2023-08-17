@@ -8,6 +8,7 @@
 
 from collections import deque
 
+from qiime2.core.type import Collection
 from qiime2.sdk.util import is_metadata_type, is_semantic_type
 
 from q2_mystery_stew.type import EchoOutput
@@ -71,3 +72,28 @@ def generate_multiple_output_methods():
                              parameter_specs={},
                              registered_outputs=qiime_outputs,
                              invocation_domain=[Invocation({}, qiime_outputs)])
+
+
+def generate_output_collection_methods():
+    action_id = 'collection_only'
+    qiime_outputs = [('output', Collection[EchoOutput])]
+    yield ActionTemplate(action_id=action_id,
+                         parameter_specs={},
+                         registered_outputs=qiime_outputs,
+                         invocation_domain=[Invocation({}, qiime_outputs)])
+
+    action_id = 'collection_first'
+    qiime_outputs = [('output_collection', Collection[EchoOutput]),
+                     ('output', EchoOutput)]
+    yield ActionTemplate(action_id=action_id,
+                         parameter_specs={},
+                         registered_outputs=qiime_outputs,
+                         invocation_domain=[Invocation({}, qiime_outputs)])
+
+    action_id = 'collection_second'
+    qiime_outputs = [('output', EchoOutput),
+                     ('output_collection', Collection[EchoOutput])]
+    yield ActionTemplate(action_id=action_id,
+                         parameter_specs={},
+                         registered_outputs=qiime_outputs,
+                         invocation_domain=[Invocation({}, qiime_outputs)])

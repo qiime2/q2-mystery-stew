@@ -9,10 +9,13 @@
 import re
 
 import qiime2
+from qiime2.sdk import ResultCollection, Result
 from qiime2.sdk.util import (is_semantic_type, is_metadata_type,
                              is_metadata_column_type)
+from qiime2.sdk.usage import COLLECTION_VAR_TYPES
 
-from q2_mystery_stew.template import argument_to_line
+from q2_mystery_stew.template import (
+    argument_to_line, OUTPUT_COLLECTION_START, OUTPUT_COLLECTION_END)
 
 
 class UsageInstantiator:
@@ -46,23 +49,53 @@ class UsageInstantiator:
                 inputs[name] = realized_arguments[name] = None
 
             elif is_semantic_type(spec.qiime_type):
-                if type(argument) == list or type(argument) == set:
+                if type(argument) is list or type(argument) is dict:
                     collection_type = type(argument)
                     realized_arguments[name] = collection_type()
                     inputs[name] = collection_type()
 
-                    for arg in argument:
-                        artifact = arg()
-                        view = artifact.view(spec.view_type)
-                        view.__hide_from_garbage_collector = artifact
-                        var = do(use.init_artifact, arg.__name__, arg)
+                    if collection_type == list:
+                        for arg in argument:
+                            artifact = arg()
+                            view = artifact.view(spec.view_type)
+                            view.__hide_from_garbage_collector = artifact
+                            var = do(use.init_artifact, arg.__name__, arg)
 
-                        if collection_type == list:
                             realized_arguments[name].append(view)
                             inputs[name].append(var)
-                        elif collection_type == set:
-                            realized_arguments[name].add(view)
-                            inputs[name].add(var)
+
+                    # we know that if we're not a list, we'll be a dict
+                    else:
+                        for key, arg in argument.items():
+                            artifact = arg()
+                            view = artifact.view(spec.view_type)
+                            view.__hide_from_garbage_collector = artifact
+
+                            realized_arguments[name][key] = view
+
+                        def _closure(argument):
+                            # We need to bind the argument from the loop above
+                            # for the factory to use the correct one.
+                            # Otherwise the argument will always be the last
+                            # element.
+                            def factory():
+                                _input = {}
+                                for k, v in argument.items():
+                                    if callable(v):
+                                        v = v()
+                                    _input[k] = v
+                                if all(isinstance(v, Result)
+                                       for v in _input.values()):
+                                    _input = ResultCollection(_input)
+
+                                return _input
+                            return factory
+                        # neato!
+                        factory = _closure(argument)
+
+                        var = do(use.init_result_collection, name, factory)
+                        inputs[name] = var
+
                 else:
                     artifact = argument()
                     view = artifact.view(spec.view_type)
@@ -148,11 +181,33 @@ class UsageInstantiator:
         output = computed_results[idx]
         output.assert_output_type(semantic_type=expected_type)
 
-        if idx == 0:
+        if output.var_type in COLLECTION_VAR_TYPES:
+            self._assert_output_collection(output, idx, realized_arguments,
+                                           expected_type)
+        else:
+            self._assert_output_single(output, idx, realized_arguments)
+
+    def _assert_output_collection(self, output, idx, realized_arguments,
+                                  expected_type):
+        inner_type = expected_type.fields[0]
+        for i in range(OUTPUT_COLLECTION_START, OUTPUT_COLLECTION_END):
+            output.assert_output_type(semantic_type=inner_type, key=i)
+            self._assert_output_single(
+                output, idx, realized_arguments, key=i,
+                expression=f"{idx}: {i}")
+
+    def _assert_output_single(self, output, idx, realized_arguments, key=None,
+                              expression=None):
+        if idx == 0 and realized_arguments:
             for name, arg in realized_arguments.items():
                 regex = self._fmt_regex(name, arg)
                 output.assert_has_line_matching(path='echo.txt',
-                                                expression=regex)
+                                                expression=regex,
+                                                key=key)
         else:
+            if expression is None:
+                expression = str(idx)
+
             output.assert_has_line_matching(path='echo.txt',
-                                            expression=str(idx + 1))
+                                            expression=expression,
+                                            key=key)

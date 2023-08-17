@@ -8,8 +8,8 @@
 
 import itertools
 
-
-from qiime2.plugin import List, Set
+from qiime2.plugin import List, Collection
+from qiime2.core.type.util import is_semantic_type
 
 from q2_mystery_stew.generators.base import ParamTemplate
 
@@ -30,22 +30,33 @@ def underpowered_set(iterable):
 def list_paramgen(generator):
     def make_list():
         for param in generator:
+            if is_semantic_type(param.qiime_type):
+                view_type = param.view_type
+            else:
+                view_type = list
+
             yield ParamTemplate(
                 param.base_name + "_list",
                 List[param.qiime_type],
-                param.view_type,
+                view_type,
                 tuple(list(x) for x in underpowered_set(param.domain)))
     make_list.__name__ = 'list_' + generator.__name__
     return make_list()
 
 
-def set_paramgen(generator):
-    def make_set():
+def collection_paramgen(generator):
+    def make_collection():
         for param in generator:
+            if is_semantic_type(param.qiime_type):
+                view_type = param.view_type
+            else:
+                view_type = dict
+
             yield ParamTemplate(
-                param.base_name + "_set",
-                Set[param.qiime_type],
-                param.view_type,
-                tuple(set(x) for x in underpowered_set(param.domain)))
-    make_set.__name__ = 'set_' + generator.__name__
-    return make_set()
+                param.base_name + "_collection",
+                Collection[param.qiime_type],
+                view_type,
+                tuple({str(k): v for k, v in enumerate(x)}
+                      for x in underpowered_set(param.domain)))
+    make_collection.__name__ = 'collection_' + generator.__name__
+    return make_collection()
