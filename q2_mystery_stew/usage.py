@@ -93,7 +93,7 @@ class UsageInstantiator:
                         # neato!
                         factory = _closure(argument)
 
-                        var = do(use.init_result_collection, name, factory)
+                        var = do(use.init_artifact_collection, name, factory)
                         inputs[name] = var
 
                 else:
