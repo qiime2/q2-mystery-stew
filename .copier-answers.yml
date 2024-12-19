@@ -1,0 +1,12 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: dfb0404
+_src_path: https://github.com/qiime2/q2-setup-template.git
+module_name: mystery_stew
+plugin_name: q2_mystery_stew
+plugin_scripts: null
+project_author_email: developers@qiime2.org
+project_author_name: null
+project_description: Template out arbitrary QIIME 2 actions to test interfaces.
+project_name: q2-mystery-stew
+project_urls_homepage: https://qiime2.org
+project_urls_repository: https://github.com/qiime2/q2-mystery-stew
