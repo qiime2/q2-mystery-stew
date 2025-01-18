@@ -15,6 +15,7 @@ requirements:
   - python {{ python }}
   - qiime2 {{ qiime2_epoch }}.*
   build:
+  - python {{ python }}
   - setuptools
   - versioningit
 test:
