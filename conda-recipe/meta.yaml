@@ -13,7 +13,7 @@ requirements:
   - wheel
   run:
   - python {{ python }}
-  - qiime2 {{ qiime2_epoch }}.*
+  - qiime2 >={{ qiime2 }}
   build:
   - python {{ python }}
   - setuptools
